@@ -14,7 +14,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID as string,
       clientSecret: process.env.GOOGLE_SECRET as string,
-      callbackURL: "/auth/google/callback",
+      callbackURL: "https://montra-hero.onrender.com/api/auth/google/callback",
     },
     (accessToken: any, refreshToken: any, profile: any, done: any) => {
       //   const user = await User.findOne({ email: profile?._json?.email });
