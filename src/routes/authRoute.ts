@@ -1,10 +1,15 @@
 import express, { Request, Response } from "express";
 import passport from "passport";
+import Auth from "../controller/authControllers";
 export const authRouter = express.Router();
 
 export interface AuthRequest extends Request {
   _id?: string;
 }
+
+authRouter.post("/signup", Auth.signup);
+authRouter.post("/signin", Auth.login);
+
 authRouter.get(
   "/google",
   passport.authenticate("google", {
