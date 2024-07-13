@@ -18,6 +18,11 @@ authRouter.get(
     failureRedirect: process.env.CLIENT_BASE_URL + "/signin",
   }),
   (req: any, res: Response, next) => {
-    // res.redirect("msrm42app://msrm42app.io?id=" + req?.user?.id);
+    console.log(
+      `${process.env.CLIENT_BASE_URL}/${req?.user?.id}`,
+      "`${process.env.CLIENT_BASE_URL}/${req?.user?.id}`"
+    );
+
+    res.redirect(`${process.env.CLIENT_BASE_URL}/${req?.user?.id}`);
   }
 );
