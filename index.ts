@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
 import { config } from "dotenv";
+config();
 import passport from "passport";
 import { authRouter } from "./src/routes/authRoute";
+import "./src/passport/googleStarategy";
 
 const app = express();
-config();
 
 const port = process.env.PORT || 8000;
 
