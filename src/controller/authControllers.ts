@@ -2,33 +2,26 @@ import { Request, Response } from "express";
 
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User from "../model/userModel";
+import User, { IUserSchema } from "../model/userModel";
 import { encryptDetails } from "../lib/functions";
 import { AuthRequest } from "../routes/authRoute";
+import { OAuth2Client } from "google-auth-library";
 
 class auth {
   async signup(req: Request, res: Response) {
-    const { username, email, password } = req.body;
-    const usernameRegex = /^[a-zA-Z0-9]+$/;
+    const { email, password } = req.body;
     try {
       const existingUser = await User.findOne({ email: email });
       if (existingUser) {
         return res.status(400).json({ message: "User already exists!" });
-      }
-      if (!usernameRegex.test(username)) {
-        return res
-          ?.status(400)
-          ?.json({ message: "Some characters are not allowed!" });
       }
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(password, salt);
       const user: any = await User.create({
         email: email,
         password: hashedPassword,
-        username: username,
       });
       const userData = {
-        username: user.username,
         email: user.email,
         picture: user.picture,
       };
@@ -74,27 +67,17 @@ class auth {
           _id: existingUser._id,
           email: existingUser.email,
         },
-        process.env.JWT_KEY as string,
-        {
-          expiresIn: "1d",
-        }
+        process.env.JWT_KEY as string
       );
 
       const userData = {
-        username: existingUser.username,
         email: existingUser.email,
         picture: existingUser.picture,
       };
       const encryptedToken = encryptDetails(jwtToken);
       return res
         .status(200)
-        .cookie("token", encryptedToken, {
-          path: "/",
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24),
-          sameSite: "none",
-          secure: true,
-        })
-        .json({ user: userData, token: jwtToken, status: true });
+        .json({ user: userData, token: encryptedToken, status: true });
     } catch (error) {
       return res.status(500).json({ message: "Error log in!", error: error });
     }
@@ -108,13 +91,64 @@ class auth {
         return res.status(404).json({ message: "No user found" });
       }
       const userData = {
-        username: user.username,
         email: user.email,
         picture: user.picture,
       };
       res.status(200).json({ user: userData, status: true });
     } catch (error) {
       res.status(500).json({ message: "Can't fetch user details" });
+    }
+  }
+  async loginWithGoogle(req: AuthRequest, res: Response) {
+    try {
+      const token = req.headers.authorization?.split("Bearer ")[1];
+      const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
+      const client = new OAuth2Client(CLIENT_ID);
+      await client
+        .verifyIdToken({
+          idToken: token as string,
+          audience: CLIENT_ID,
+        })
+        .then(async (ticket) => {
+          const payload = ticket.getPayload();
+          const userData = {
+            email: payload?.email,
+            picture: payload?.picture,
+          };
+          let user = await User.findOne({ email: payload?.email });
+          if (user === null || !user) {
+            const user: any = await User.create({
+              email: payload?.email,
+              picture: payload?.picture,
+            });
+            const jwtToken = jwt.sign(
+              { _id: user._id, email: user.email },
+              process.env.JWT_KEY as string
+            );
+
+            const encryptedToken = encryptDetails(jwtToken);
+
+            return res
+              .status(200)
+              .json({ user: userData, token: encryptedToken, status: true });
+          }
+          const jwtToken = jwt.sign(
+            { _id: user._id, email: user.email },
+            process.env.JWT_KEY as string
+          );
+
+          const encryptedToken = encryptDetails(jwtToken);
+          return res
+            .status(200)
+            .json({ user: userData, token: encryptedToken, status: true });
+        })
+        .catch((err) => {
+          return res
+            .status(401)
+            .json({ status: false, message: "Token Expired!" });
+        });
+    } catch (error) {
+      res.status(401).json({ message: "Invalid token" });
     }
   }
 }
