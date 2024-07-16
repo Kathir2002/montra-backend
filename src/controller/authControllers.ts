@@ -101,7 +101,7 @@ class auth {
   }
   async loginWithGoogle(req: AuthRequest, res: Response) {
     try {
-      const token = req.headers.authorization?.split("Bearer ")[1];
+      const token = req.headers.authorization || req?.headers?.Authorization;
       const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
       const client = new OAuth2Client(CLIENT_ID);
       await client
