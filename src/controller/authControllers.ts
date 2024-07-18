@@ -88,7 +88,7 @@ class auth {
         .status(200)
         .json({ user: userData, token: encryptedToken, status: true });
     } catch (error) {
-      return res.status(500).json({ message: "Error log in!", error: error });
+      return res.status(500).json({ message: "Error in login!", error: error });
     }
   }
   async userDetails(req: AuthRequest, res: Response) {
@@ -113,7 +113,9 @@ class auth {
   async loginWithGoogle(req: AuthRequest, res: Response) {
     try {
       const token = req.headers.authorization || req?.headers?.Authorization;
+      // req?.headers?.Authorization?.split("Bearer ")[1];
       const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
+
       const client = new OAuth2Client(CLIENT_ID);
       await client
         .verifyIdToken({
@@ -128,6 +130,7 @@ class auth {
             const newUser: any = await User.create({
               email: payload?.email,
               picture: payload?.picture,
+              name: payload?.name,
             });
             const jwtToken = jwt.sign(
               {
@@ -162,6 +165,8 @@ class auth {
             .json({ user: userData, token: encryptedToken, success: true });
         })
         .catch((err) => {
+          console.log(err);
+
           return res
             .status(401)
             .json({ success: false, message: "Token Expired!" });
