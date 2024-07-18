@@ -111,18 +111,20 @@ class auth {
         })
         .then(async (ticket) => {
           const payload = ticket.getPayload();
-          const userData = {
-            email: payload?.email,
-            picture: payload?.picture,
-          };
-          let user = await User.findOne({ email: payload?.email });
-          if (user === null || !user) {
-            const user: any = await User.create({
+          let existingUser = await User.findOne({ email: payload?.email });
+
+          if (existingUser === null || !existingUser) {
+            const newUser: any = await User.create({
               email: payload?.email,
               picture: payload?.picture,
             });
             const jwtToken = jwt.sign(
-              { _id: user._id, email: user.email },
+              {
+                _id: newUser._id,
+                email: newUser.email,
+                id: newUser._id,
+                isSetupDone: newUser.isSetupDone,
+              },
               process.env.JWT_KEY as string
             );
 
@@ -130,10 +132,16 @@ class auth {
 
             return res
               .status(200)
-              .json({ user: userData, token: encryptedToken, status: true });
+              .json({ user: newUser, token: encryptedToken, status: true });
           }
+          const userData = {
+            email: existingUser?.email,
+            picture: existingUser?.picture,
+            id: existingUser._id,
+            isSetupDone: existingUser.isSetupDone,
+          };
           const jwtToken = jwt.sign(
-            { _id: user._id, email: user.email },
+            { _id: existingUser._id, email: existingUser.email },
             process.env.JWT_KEY as string
           );
 
