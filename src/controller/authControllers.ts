@@ -9,7 +9,7 @@ import { OAuth2Client } from "google-auth-library";
 
 class auth {
   async signup(req: Request, res: Response) {
-    const { email, password } = req.body;
+    const { email, password, name } = req.body;
     try {
       const existingUser = await User.findOne({ email: email });
       if (existingUser) {
@@ -22,10 +22,12 @@ class auth {
       const user: any = await User.create({
         email: email,
         password: hashedPassword,
+        name: name,
       });
       const userData = {
         email: user.email,
         picture: user.picture,
+        name: user.name,
       };
       return res.status(200).json({
         user: userData,

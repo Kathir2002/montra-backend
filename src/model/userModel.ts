@@ -6,10 +6,16 @@ export interface IUserSchema {
   picture: string;
   isSetupDone: boolean;
   profile: mongoose.Types.ObjectId;
+  name: string;
 }
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
   {
+    name: {
+      type: String,
+      required: true,
+      trim: true,
+    },
     email: {
       type: String,
       required: true,
