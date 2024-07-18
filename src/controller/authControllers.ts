@@ -13,7 +13,9 @@ class auth {
     try {
       const existingUser = await User.findOne({ email: email });
       if (existingUser) {
-        return res.status(400).json({ message: "User already exists!" });
+        return res
+          .status(400)
+          .json({ message: "User already exists!", success: false });
       }
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(password, salt);
@@ -27,7 +29,7 @@ class auth {
       };
       return res.status(200).json({
         user: userData,
-        status: true,
+        success: true,
         message: "Account created successfully!",
       });
     } catch (error) {
@@ -44,12 +46,15 @@ class auth {
       const existingUser = await User.findOne({ email: userId });
 
       if (!existingUser) {
-        return res.status(400).json({ message: "User not found" });
+        return res
+          .status(400)
+          .json({ message: "User not found", success: false });
       }
       if (existingUser && !existingUser.password) {
         return res?.status(400).json({
           message:
-            'Please login to your account with "Continue With Google" option',
+            'Please login to your account with "Login With Google" option',
+          success: false,
         });
       }
 
@@ -59,7 +64,9 @@ class auth {
       );
 
       if (!passwordMatched) {
-        return res.status(400).json({ message: "Invalid password" });
+        return res
+          .status(400)
+          .json({ message: "Invalid password", success: false });
       }
 
       const jwtToken = jwt.sign(
@@ -88,13 +95,15 @@ class auth {
     try {
       const user = await User.findById(userId);
       if (!user) {
-        return res.status(404).json({ message: "No user found" });
+        return res
+          .status(404)
+          .json({ message: "No user found", success: false });
       }
       const userData = {
         email: user.email,
         picture: user.picture,
       };
-      res.status(200).json({ user: userData, status: true });
+      res.status(200).json({ user: userData, success: true });
     } catch (error) {
       res.status(500).json({ message: "Can't fetch user details" });
     }
@@ -132,7 +141,7 @@ class auth {
 
             return res
               .status(200)
-              .json({ user: newUser, token: encryptedToken, status: true });
+              .json({ user: newUser, token: encryptedToken, success: true });
           }
           const userData = {
             email: existingUser?.email,
@@ -148,12 +157,12 @@ class auth {
           const encryptedToken = encryptDetails(jwtToken);
           return res
             .status(200)
-            .json({ user: userData, token: encryptedToken, status: true });
+            .json({ user: userData, token: encryptedToken, success: true });
         })
         .catch((err) => {
           return res
             .status(401)
-            .json({ status: false, message: "Token Expired!" });
+            .json({ success: false, message: "Token Expired!" });
         });
     } catch (error) {
       res.status(401).json({ message: "Invalid token" });

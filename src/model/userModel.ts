@@ -5,6 +5,7 @@ export interface IUserSchema {
   password: string;
   picture: string;
   isSetupDone: boolean;
+  profile: mongoose.Types.ObjectId;
 }
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
@@ -30,6 +31,7 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       required: true,
       default: false,
     },
+    profile: { type: mongoose.Schema.Types.ObjectId, ref: "Profile" },
   },
   { timestamps: true }
 );
