@@ -10,4 +10,4 @@ export interface AuthRequest extends Request {
 authRouter.post("/signup", Auth.signup);
 authRouter.post("/signin", Auth.login);
 authRouter.post("/signin/google", Auth.loginWithGoogle);
-authRouter.post("/user-details", verifyToken, Auth.userDetails);
+authRouter.get("/user-details", verifyToken, Auth.userDetails);
