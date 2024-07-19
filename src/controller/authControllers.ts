@@ -102,6 +102,8 @@ class auth {
           .json({ message: "No user found", success: false });
       }
       const userData = {
+        name: user?.name,
+        id: user?._id,
         email: user.email,
         picture: user.picture,
       };
@@ -113,7 +115,6 @@ class auth {
   async loginWithGoogle(req: AuthRequest, res: Response) {
     try {
       const token = req.headers.authorization || req?.headers?.Authorization;
-      // req?.headers?.Authorization?.split("Bearer ")[1];
       const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
 
       const client = new OAuth2Client(CLIENT_ID);
@@ -136,8 +137,6 @@ class auth {
               {
                 _id: newUser._id,
                 email: newUser.email,
-                id: newUser._id,
-                isSetupDone: newUser.isSetupDone,
               },
               process.env.JWT_KEY as string
             );

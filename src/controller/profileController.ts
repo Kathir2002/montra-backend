@@ -25,6 +25,7 @@ class profileController {
     });
     if (isAuthenticated && user) {
       user.profile = profileData._id;
+      user.isSetupDone = true;
       await user.save();
     }
     return res
