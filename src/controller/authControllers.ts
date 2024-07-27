@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import otpGenerator from "otp-generator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import User, { IUserSchema } from "../model/userModel";
-import { encryptDetails, isValidEmail } from "../lib/functions";
+import User from "../model/userModel";
+import { encryptDetails, isValidEmail, sendMail } from "../lib/functions";
 import { AuthRequest } from "../routes/authRoute";
 import { OAuth2Client } from "google-auth-library";
 import OTP from "../model/otpModel";
@@ -253,6 +253,148 @@ class auth {
     } catch (error: any) {
       console.log(error?.message);
       return res.status(500).json({ success: false, error: error?.message });
+    }
+  }
+
+  async forgotPassword(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+
+      if (!isValidEmail(email)) {
+        return res
+          ?.status(400)
+          .json({ message: "Enter a valid email address", success: false });
+      }
+
+      // Check if user already exists
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "User not found", success: false });
+      }
+      const jwtToken = jwt.sign(
+        {
+          _id: user._id,
+          email: user.email,
+        },
+        process.env.JWT_KEY as string,
+        { expiresIn: "1h" }
+      );
+
+      await sendMail({
+        to: email,
+        subject: "Reset Password",
+        html: `<!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Reset Your Password</title>
+          <style>
+              body {
+                  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                  background-color: #f4f4f4;
+                  margin: 0;
+                  padding: 0;
+                  color: #555555;
+              }
+              .container {
+                  max-width: 600px;
+                  margin: 30px auto;
+                  background-color: #ffffff;
+                  padding: 30px;
+                  border-radius: 10px;
+                  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+              }
+              .header {
+                  text-align: center;
+                  border-bottom: 2px solid #eeeeee;
+                  padding-bottom: 20px;
+                  margin-bottom: 20px;
+              }
+              .header h1 {
+                  margin: 0;
+                  color: #333333;
+                  font-size: 24px;
+              }
+              .content {
+                  padding: 20px 0;
+              }
+              .content p {
+                  line-height: 1.6;
+                  font-size: 16px;
+              }
+              .btn-container {
+                  text-align: center;
+                  margin: 30px 0;
+              }
+              .btn {
+                  display: inline-block;
+                  background-color: #007BFF;
+                  color: #ffffff;
+                  padding: 15px 30px;
+                  font-size: 16px;
+                  text-decoration: none;
+                  border-radius: 5px;
+                  box-shadow: 0 4px 6px rgba(0, 123, 255, 0.2);
+                  transition: background-color 0.3s, box-shadow 0.3s;
+              }
+              .btn:hover {
+                  background-color: #0056b3;
+                  box-shadow: 0 6px 8px rgba(0, 123, 255, 0.3);
+              }
+              .footer {
+                  text-align: center;
+                  padding-top: 20px;
+                  border-top: 2px solid #eeeeee;
+                  margin-top: 20px;
+              }
+              .footer p {
+                  font-size: 14px;
+                  color: #999999;
+              }
+              .footer a {
+                  color: #007BFF;
+                  text-decoration: none;
+              }
+              .footer a:hover {
+                  text-decoration: underline;
+              }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>Reset Your Password</h1>
+              </div>
+              <div class="content">
+                  <p>Hi [User's First Name],</p>
+                  <p>It looks like you requested a password reset. Don't worry, we've got you covered!</p>
+                  <p>Please click the button below to reset your password:</p>
+                  <div class="btn-container">
+                      <a href="${process.env.DEEPLINK_URL}/reset-password/${jwtToken}" class="btn">Reset Password</a>
+                  </div>
+                  <p>If you didn't request a password reset, you can safely ignore this email. Your password will remain the same, and no changes will be made.</p>
+                  <p>For any further assistance, feel free to contact our support team.</p>
+                  <p>Best regards,<br>Montra Support Team</p>
+              </div>
+              <div class="footer">
+                  <p>Contact Information:</p>
+                  <p>Email: <a href="mailto:montra.service@gmail.com">montra.service@gmail.com</a></p>
+                  <p>Note: This link will expire in 1 hour for your security.</p>
+              </div>
+          </div>
+      </body>
+      </html>
+      `,
+      });
+      res.status(200).json({
+        success: true,
+        message: "Reset password link sent to your email",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message });
     }
   }
 }

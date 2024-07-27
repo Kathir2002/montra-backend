@@ -141,7 +141,9 @@ async function sendVerificationEmail(email: string, otp: string, name: string) {
             <p>This OTP is valid for the next 5 minutes. Please do not share this OTP with anyone.</p>
             <p>If you did not request this, please ignore this email.</p>
             <p>Thank you,<br>Montra</p>
-            <a href="https://montra-hero.onrender.com/verify-email/${email}" class="button">Complete Verification</a>
+            <a href="${
+              process.env.DEEPLINK_URL
+            }/verify-email/${email}" class="button">Complete Verification</a>
         </div>
         <div class="footer">
             <p>&copy; ${new Date().getFullYear()} Montra. All rights reserved.</p>
