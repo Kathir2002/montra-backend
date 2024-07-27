@@ -137,7 +137,7 @@ async function sendVerificationEmail(email: string, otp: string, name: string) {
             <h1>OTP Verification</h1>
             <p>Dear ${name},</p>
             <p>Thank you for registering with us. Please use the following OTP to complete your verification process:</p>
-            <div class="otp">{{${otp}}}</div>
+            <div class="otp">${otp}</div>
             <p>This OTP is valid for the next 5 minutes. Please do not share this OTP with anyone.</p>
             <p>If you did not request this, please ignore this email.</p>
             <p>Thank you,<br>Montra</p>

@@ -369,7 +369,7 @@ class auth {
                   <h1>Reset Your Password</h1>
               </div>
               <div class="content">
-                  <p>Hi [User's First Name],</p>
+                  <p>Hi ${user.name},</p>
                   <p>It looks like you requested a password reset. Don't worry, we've got you covered!</p>
                   <p>Please click the button below to reset your password:</p>
                   <div class="btn-container">
@@ -392,6 +392,97 @@ class auth {
       res.status(200).json({
         success: true,
         message: "Reset password link sent to your email",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, error: err?.message });
+    }
+  }
+  async restPassword(req: AuthRequest, res: Response) {
+    try {
+      const { newPassword } = req.body;
+      const userId = req._id;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(newPassword, salt);
+
+      user.password = hashedPassword;
+      user.save();
+
+      sendMail({
+        to: user.email,
+        subject: "Password Reset Successful",
+        html: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Changed Successfully</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            background-color: #7F3DFF;
+            color: #ffffff;
+            padding: 10px 0;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            padding: 20px;
+        }
+        .footer {
+            text-align: center;
+            padding: 10px;
+            font-size: 12px;
+            color: #777777;
+        }
+        a {
+            color: #4CAF50;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Password Changed Successfully</h1>
+        </div>
+        <div class="content">
+            <p>Dear ${user?.name},</p>
+            <p>We wanted to let you know that your password has been changed successfully.</p>
+            <p>If you did not make this change, please contact our support team immediately.</p>
+            <p>Thank you,<br>The Montra Team</p>
+        </div>
+        <div class="footer">
+            <p>&copy; ${new Date().getFullYear()} Montra. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+`,
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "Password has been changed successfully",
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, error: err?.message });
