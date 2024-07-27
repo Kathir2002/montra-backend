@@ -1,6 +1,15 @@
 import * as CryptoJS from "crypto-js";
 import dorenv from "dotenv";
+import nodemailer from "nodemailer";
+import Mail from "nodemailer/lib/mailer";
 dorenv.config();
+
+export interface MailOptionsInterface {
+  from?: string;
+  to: string;
+  subject: string;
+  html: string;
+}
 
 export const decryptDetails = (data: string) => {
   if (data) {
@@ -30,3 +39,33 @@ export const encryptDetails = (data: string) => {
     return null;
   }
 };
+
+export const sendMail = ({ from, html, subject, to }: MailOptionsInterface) => {
+  let mailTransporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: "montra.service@gmail.com",
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+
+  const mailOptions: MailOptionsInterface = {
+    from: "montra.service@gmail.com",
+    to: to,
+    subject: subject,
+    html: html,
+  };
+
+  mailTransporter.sendMail(mailOptions, (err) => {
+    if (err) {
+      console.log(err.message);
+    } else {
+      console.log("Email has sent");
+    }
+  });
+};
+
+export function isValidEmail(email: string) {
+  const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+  return regex.test(email);
+}

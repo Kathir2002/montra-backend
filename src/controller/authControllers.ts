@@ -1,28 +1,54 @@
 import { Request, Response } from "express";
-
+import otpGenerator from "otp-generator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User, { IUserSchema } from "../model/userModel";
-import { encryptDetails } from "../lib/functions";
+import { encryptDetails, isValidEmail } from "../lib/functions";
 import { AuthRequest } from "../routes/authRoute";
 import { OAuth2Client } from "google-auth-library";
+import OTP from "../model/otpModel";
 
 class auth {
   async signup(req: Request, res: Response) {
-    const { email, password, name } = req.body;
     try {
-      const existingUser = await User.findOne({ email: email });
-      if (existingUser) {
-        return res
-          .status(400)
-          .json({ message: "User already exists!", success: false });
+      const { email, otp } = req.body;
+
+      // Check if all details are provided
+      if (!email || !otp) {
+        return res.status(403).json({
+          success: false,
+          message: "All fields are required",
+        });
       }
-      const salt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash(password, salt);
+      if (!isValidEmail(email)) {
+        return res
+          ?.status(400)
+          .json({ message: "Enter a valid email address" });
+      }
+
+      // Check if user already exists
+      const existingUser = await User.findOne({ email });
+      if (existingUser) {
+        return res.status(400).json({
+          success: false,
+          message: "User already exists",
+        });
+      }
+      // Find the most recent OTP for the email
+      const response = await OTP.find({ email })
+        .sort({ createdAt: -1 })
+        .limit(1);
+      if (response.length === 0 || otp !== response[0].otp) {
+        return res.status(400).json({
+          success: false,
+          message: "The OTP is not valid",
+        });
+      }
+
       const user: any = await User.create({
         email: email,
-        password: hashedPassword,
-        name: name,
+        password: response[0]?.password,
+        name: response[0]?.name,
       });
       const userData = {
         email: user.email,
@@ -42,10 +68,15 @@ class auth {
   }
 
   async login(req: Request, res: Response) {
-    const { userId, password }: { userId: string; password: string } = req.body;
+    const { email, password }: { email: string; password: string } = req.body;
 
     try {
-      const existingUser = await User.findOne({ email: userId });
+      if (!isValidEmail(email)) {
+        return res
+          ?.status(400)
+          .json({ message: "Enter a valid email address" });
+      }
+      const existingUser = await User.findOne({ email: email });
 
       if (!existingUser) {
         return res
@@ -80,22 +111,25 @@ class auth {
       );
 
       const userData = {
+        id: existingUser._id,
+        name: existingUser.name,
         email: existingUser.email,
         picture: existingUser.picture,
+        isSetupDone: existingUser.isSetupDone,
       };
       const encryptedToken = encryptDetails(jwtToken);
       return res
         .status(200)
-        .json({ user: userData, token: encryptedToken, status: true });
+        .json({ user: userData, token: encryptedToken, success: true });
     } catch (error) {
       return res.status(500).json({ message: "Error in login!", error: error });
     }
   }
   async userDetails(req: AuthRequest, res: Response) {
-    const userId = req._id;
+    const email = req._id;
 
     try {
-      const user = await User.findById(userId);
+      const user = await User.findById(email);
       if (!user) {
         return res
           .status(404)
@@ -152,6 +186,7 @@ class auth {
             picture: existingUser?.picture,
             id: existingUser._id,
             isSetupDone: existingUser.isSetupDone,
+            name: existingUser.name,
           };
           const jwtToken = jwt.sign(
             { _id: existingUser._id, email: existingUser.email },
@@ -172,6 +207,52 @@ class auth {
         });
     } catch (error) {
       res.status(401).json({ message: "Invalid token" });
+    }
+  }
+
+  async sendOtp(req: Request, res: Response) {
+    try {
+      const { email, name, password } = req.body;
+      if (!isValidEmail(email)) {
+        return res
+          ?.status(400)
+          .json({ message: "Enter a valid email address" });
+      }
+      // Check if user is already present
+      const checkUserPresent = await User.findOne({ email });
+      // If user found with provided email
+      if (checkUserPresent) {
+        return res.status(401).json({
+          success: false,
+          message: "User is already registered",
+        });
+      }
+      let otp = otpGenerator.generate(6, {
+        upperCaseAlphabets: false,
+        lowerCaseAlphabets: false,
+        specialChars: false,
+      });
+      let result = await OTP.findOne({ otp: otp });
+      while (result) {
+        otp = otpGenerator.generate(6, {
+          upperCaseAlphabets: false,
+        });
+        result = await OTP.findOne({ otp: otp });
+      }
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const otpPayload = { email, otp, password: hashedPassword, name };
+
+      await OTP.create(otpPayload);
+
+      res.status(200).json({
+        success: true,
+        message: "OTP sent successfully",
+        otp,
+      });
+    } catch (error: any) {
+      console.log(error?.message);
+      return res.status(500).json({ success: false, error: error?.message });
     }
   }
 }
