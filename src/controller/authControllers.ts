@@ -140,6 +140,7 @@ class auth {
         id: user?._id,
         email: user.email,
         picture: user.picture,
+        isSetupDone: user?.isSetupDone,
       };
       res.status(200).json({ user: userData, success: true });
     } catch (error) {
