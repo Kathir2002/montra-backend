@@ -42,7 +42,10 @@ export const encryptDetails = (data: string) => {
 
 export const sendMail = ({ from, html, subject, to }: MailOptionsInterface) => {
   let mailTransporter = nodemailer.createTransport({
-    service: "gmail",
+    host: "smtp.gmail.com",
+    port: 587,
+    ignoreTLS: false,
+    secure: false,
     auth: {
       user: "montra.service@gmail.com",
       pass: process.env.EMAIL_PASS,
