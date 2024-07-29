@@ -25,6 +25,8 @@ app.use("/.well-known/assetlinks.json", (req, res) => {
 });
 
 app.post("/upload", upload.any(), async (req, res) => {
+  console.log(req?.file, "req?.file");
+
   if (req.file) {
     uploadToCloud(req, res);
   } else {
