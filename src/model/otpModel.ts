@@ -156,8 +156,8 @@ async function sendVerificationEmail(email: string, otp: string, name: string) {
       to: email,
     });
     console.log("Email sent successfully: ", mailResponse);
-  } catch (error) {
-    console.log("Error occurred while sending email: ", error);
+  } catch (error: any) {
+    console.log("Error occurred while sending email: ", error?.message);
     throw error;
   }
 }

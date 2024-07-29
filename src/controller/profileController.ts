@@ -35,7 +35,7 @@ class profileController {
         .status(200)
         .json({ message: "User profile created successfully!", success: true });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err?.message });
+      return res.status(500).json({ success: false, message: err?.message });
     }
   }
 }

@@ -60,10 +60,8 @@ class auth {
         success: true,
         message: "Account created successfully!",
       });
-    } catch (error) {
-      return res
-        .status(500)
-        .json({ message: "Error signing up!", error: error });
+    } catch (error: any) {
+      return res.status(500).json({ message: error?.message });
     }
   }
 
@@ -121,8 +119,8 @@ class auth {
       return res
         .status(200)
         .json({ user: userData, token: encryptedToken, success: true });
-    } catch (error) {
-      return res.status(500).json({ message: "Error in login!", error: error });
+    } catch (error: any) {
+      return res.status(500).json({ message: error?.message });
     }
   }
   async userDetails(req: AuthRequest, res: Response) {
@@ -253,7 +251,7 @@ class auth {
       });
     } catch (error: any) {
       console.log(error?.message);
-      return res.status(500).json({ success: false, error: error?.message });
+      return res.status(500).json({ success: false, message: error?.message });
     }
   }
 
@@ -395,7 +393,7 @@ class auth {
         message: "Reset password link sent to your email",
       });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err?.message });
+      return res.status(500).json({ success: false, message: err?.message });
     }
   }
   async restPassword(req: AuthRequest, res: Response) {
@@ -486,7 +484,7 @@ class auth {
         message: "Password has been changed successfully",
       });
     } catch (err: any) {
-      return res.status(500).json({ success: false, error: err?.message });
+      return res.status(500).json({ success: false, message: err?.message });
     }
   }
 }

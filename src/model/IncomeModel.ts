@@ -8,6 +8,11 @@ interface IIncomeSchema {
   wallet: string;
   description: string;
   frequency: string;
+  document: {
+    fileName: string;
+    fileUrl: string;
+    fileSize: string;
+  };
 }
 
 const incomeSchema = new mongoose.Schema<IIncomeSchema>(
@@ -18,20 +23,14 @@ const incomeSchema = new mongoose.Schema<IIncomeSchema>(
     },
     endAfter: {
       type: Date,
-      validate: {
-        validator: function (value) {
-          return !this.isRepeat || (this.isRepeat && value != null);
-        },
-        message: "endAfter is required when isRepeat is true",
+      required: function () {
+        return this.isRepeat;
       },
     },
     frequency: {
       type: String,
-      validate: {
-        validator: function (value) {
-          return !this.isRepeat || (this.isRepeat && value != null);
-        },
-        message: "frequency is required when isRepeat is true",
+      required: function () {
+        return this.isRepeat;
       },
     },
     amount: {
@@ -50,9 +49,34 @@ const incomeSchema = new mongoose.Schema<IIncomeSchema>(
       type: String,
       trim: true,
     },
+    document: {
+      fileUrl: {
+        type: String,
+      },
+      fileName: {
+        type: String,
+      },
+      fileSize: {
+        type: Number,
+      },
+    },
   },
   { timestamps: true }
 );
 
-const Income = mongoose.model("Transaction", incomeSchema);
+incomeSchema.path("endAfter").validate(function (value) {
+  if (this.isRepeat && !value) {
+    throw new Error("endAfter is required when isRepeat is true.");
+  }
+  return true;
+}, "endAfter is required when isRepeat is true.");
+
+incomeSchema.path("frequency").validate(function (value) {
+  if (this.isRepeat && !value) {
+    throw new Error("frequency is required when isRepeat is true.");
+  }
+  return true;
+}, "frequency is required when isRepeat is true.");
+
+const Income = mongoose.model("Income", incomeSchema);
 export default Income;

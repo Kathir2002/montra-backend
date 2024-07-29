@@ -8,9 +8,6 @@ import assetLink from "./src/constant/assetlinks.json";
 import cloud from "cloudinary";
 import { profileRouter } from "./src/routes/profileRoute";
 import { verifyToken } from "./src/middleware/verifyToken";
-import multer from "multer";
-import path from "path";
-import fs from "fs";
 
 const app = express();
 app.use(express.json());
@@ -26,53 +23,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir);
-}
-
-// Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, uploadDir);
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-
-const upload = multer({ storage: storage });
-
 app.use("/api/auth", authRouter);
 app.use("/api/user", verifyToken, profileRouter);
 
 app.use("/.well-known/assetlinks.json", (req, res) => {
   res.status(200).json(assetLink);
-});
-
-app.post("/upload", upload.single("file"), async (req, res) => {
-  console.log(req?.file, "req?.file");
-  // Upload the file to Cloudinary
-  if (req.file) {
-    // Upload the file to Cloudinary
-    cloudinary.uploader.upload(
-      req?.file?.path,
-      { folder: "sample_upload" },
-      (error, result) => {
-        if (error) {
-          return res.status(500).send(error);
-        }
-
-        // Delete the file from the local filesystem
-        fs.unlinkSync(req?.file?.path!);
-
-        // Respond with the URL of the uploaded file
-        res.json({ imageUrl: result?.secure_url, publicId: result?.public_id });
-      }
-    );
-  } else {
-    res.status(400).json({ error: "No file uploaded" });
-  }
 });
 
 connectMongoDB();
