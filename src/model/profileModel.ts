@@ -16,6 +16,7 @@ const profileSchema = new mongoose.Schema<IProfileSchema>(
     accountName: {
       type: String,
       required: true,
+      trim: true,
     },
     accountType: {
       type: String,
