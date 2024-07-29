@@ -6,7 +6,7 @@ import User from "../model/userModel";
 class profileController {
   async setup(req: AuthRequest, res: Response) {
     try {
-      const { providerName, accountName, accountType } = req.body;
+      const { providerName, accountName, accountType, amount } = req.body;
       let user = undefined;
       let isAuthenticated = false;
       if (req._id) {
@@ -15,17 +15,16 @@ class profileController {
         isAuthenticated = true;
       }
       if (providerName === "" || accountName === "" || accountType === "")
-        return res
-          .status(404)
-          .json({
-            message: "Please fill all necessary fields",
-            success: false,
-          });
+        return res.status(404).json({
+          message: "Please fill all necessary fields",
+          success: false,
+        });
 
       const profileData = await ProfileModel.create({
-        provider: providerName,
+        providerName: providerName,
         accountName: accountName,
         accountType: accountType,
+        amount: amount,
       });
       if (isAuthenticated && user) {
         user.profile = profileData._id;

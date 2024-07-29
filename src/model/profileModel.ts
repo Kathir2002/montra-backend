@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 
 interface IProfileSchema {
+  amount: number;
   accountName: string;
   accountType: string;
   providerName: string;
@@ -8,6 +9,10 @@ interface IProfileSchema {
 
 const profileSchema = new mongoose.Schema<IProfileSchema>(
   {
+    amount: {
+      type: Number,
+      required: true,
+    },
     accountName: {
       type: String,
       required: true,
