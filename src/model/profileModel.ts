@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 interface IProfileSchema {
   accountName: string;
   accountType: string;
-  provider: { providerName: string }[];
+  providerName: string;
 }
 
 const profileSchema = new mongoose.Schema<IProfileSchema>(
@@ -16,14 +16,10 @@ const profileSchema = new mongoose.Schema<IProfileSchema>(
       type: String,
       required: true,
     },
-    provider: [
-      {
-        providerName: {
-          type: String,
-          required: true,
-        },
-      },
-    ],
+    providerName: {
+      type: String,
+      required: true,
+    },
   },
   { timestamps: true }
 );
