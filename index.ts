@@ -26,10 +26,15 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const uploadDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
 // Configure Multer
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, "uploads/");
+    cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname)); // Append the file extension
@@ -52,7 +57,7 @@ app.post("/upload", upload.any(), async (req, res) => {
     // Upload the file to Cloudinary
     cloudinary.uploader.upload(
       req?.file?.path,
-      { folder: "your_folder_name" },
+      { folder: "sample_upload" },
       (error, result) => {
         if (error) {
           return res.status(500).send(error);
