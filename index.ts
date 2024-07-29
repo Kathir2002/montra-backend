@@ -31,17 +31,17 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir);
 }
 
-// Configure Multer
+// Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, uploadDir);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)); // Append the file extension
+    cb(null, Date.now() + path.extname(file.originalname));
   },
 });
 
-export const upload = multer({ storage: storage });
+const upload = multer({ storage: storage });
 
 app.use("/api/auth", authRouter);
 app.use("/api/user", verifyToken, profileRouter);
@@ -50,7 +50,7 @@ app.use("/.well-known/assetlinks.json", (req, res) => {
   res.status(200).json(assetLink);
 });
 
-app.post("/upload", upload.any(), async (req, res) => {
+app.post("/upload", upload.single("file"), async (req, res) => {
   console.log(req?.file, "req?.file");
   // Upload the file to Cloudinary
   if (req.file) {
