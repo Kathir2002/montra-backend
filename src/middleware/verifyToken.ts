@@ -12,8 +12,7 @@ export const verifyToken = async (
   next: NextFunction
 ) => {
   const encryptedToken =
-    req.headers.authorization?.split(" ")[1] ||
-    req.headers.Authorization?.split(" ")[1];
+    req.headers.authorization?.split || req.headers.Authorization?.split;
 
   if (!encryptedToken) {
     return res
