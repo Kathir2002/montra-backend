@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import path from "path";
 import fs from "fs";
 import multer from "multer";
+import { promisify } from "util";
 
 export interface IDocument {
   imageUrl: string;
@@ -11,6 +12,7 @@ export interface IDocument {
 }
 
 const cloudinary = cloud.v2;
+const unlinkAsync = promisify(fs.unlink);
 
 const uploadDir = path.join(__dirname, "uploads");
 if (!fs.existsSync(uploadDir)) {
@@ -30,29 +32,35 @@ const storage = multer.diskStorage({
 export const upload = multer({ storage: storage });
 
 export const uploadToCloud = async (req: Request, res: Response) => {
-  console.log(req?.file, "req?.file");
-  // Upload the file to Cloudinary
-  if (req.file) {
-    // Upload the file to Cloudinary
-    cloudinary.uploader.upload(
-      req?.file?.path,
-      //   { folder: "sample_upload" },
-      (error, result) => {
-        if (error) {
-          return res.status(500).send(error);
+  if (req?.file) {
+    return await new Promise((resolve, reject) => {
+      // Upload the file to Cloudinary
+      cloudinary.uploader.upload(
+        req?.file?.path!,
+        { folder: req?.body?.type },
+        async (error, result) => {
+          if (error) {
+            reject(error);
+          }
+          // Check if file exists before deleting
+          const filePath = req?.file?.path!;
+          if (fs.existsSync(filePath)) {
+            await unlinkAsync(filePath);
+            console.log(`File ${filePath} deleted successfully.`);
+          } else {
+            console.log(`File ${filePath} does not exist.`);
+          }
+
+          // Respond with the URL of the uploaded file
+          resolve({
+            fileUrl: result?.secure_url,
+            fileName: result?.original_filename,
+            fileSize: result?.bytes,
+            fileFormat: result?.format,
+          });
         }
-
-        // Delete the file from the local filesystem
-        fs.unlinkSync(req?.file?.path!);
-
-        // Respond with the URL of the uploaded file
-        return {
-          fileUrl: result?.secure_url,
-          fileName: result?.original_filename,
-          fileSize: result?.bytes,
-        };
-      }
-    );
+      );
+    });
   } else {
     res.status(400).json({ error: "No file uploaded" });
   }

@@ -8,3 +8,4 @@ export interface AuthRequest extends Request {
 }
 
 profileRouter.post("/setup", Profile.setup);
+profileRouter.get("/get-wallet-list", Profile.getWalletList);

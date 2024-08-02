@@ -1,10 +1,10 @@
 import express, { Request, Response } from "express";
-import Expense from "../controller/expenseControllers";
 import { upload } from "../lib/upload";
+import Transaction from "../controller/transactionControllers";
 
-export const TransactionRouter = express.Router();
-TransactionRouter.post(
-  "/add-expense",
+export const transactionRouter = express.Router();
+transactionRouter.post(
+  "/add-transaction",
   upload.single("file"),
-  Expense.addExpense
+  Transaction.addTransaction
 );

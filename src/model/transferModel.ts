@@ -8,6 +8,7 @@ interface ITransferSchema {
   document: {
     fileName: string;
     fileUrl: string;
+    fileFormat: string;
     fileSize: number;
   };
 }
@@ -39,6 +40,9 @@ const transferSchema = new mongoose.Schema<ITransferSchema>(
       fileName: {
         type: String,
       },
+      fileFormat: {
+        type: String,
+      },
       fileSize: {
         type: Number,
       },
@@ -47,5 +51,5 @@ const transferSchema = new mongoose.Schema<ITransferSchema>(
   { timestamps: true }
 );
 
-const Transfer = mongoose.model("Transfer", transferSchema);
-export default Transfer;
+const TransferModel = mongoose.model("Transfer", transferSchema);
+export default TransferModel;

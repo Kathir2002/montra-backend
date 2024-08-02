@@ -8,10 +8,12 @@ import assetLink from "./src/constant/assetlinks.json";
 import cloud from "cloudinary";
 import { profileRouter } from "./src/routes/profileRoute";
 import { verifyToken } from "./src/middleware/verifyToken";
+import { transactionRouter } from "./src/routes/transactionRoute";
 
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 app.use(cors({ origin: "*" }));
 
 const port = process.env.PORT || 8000;
@@ -25,6 +27,7 @@ cloudinary.config({
 
 app.use("/api/auth", authRouter);
 app.use("/api/user", verifyToken, profileRouter);
+app.use("/api/transaction", verifyToken, transactionRouter);
 
 app.use("/.well-known/assetlinks.json", (req, res) => {
   res.status(200).json(assetLink);

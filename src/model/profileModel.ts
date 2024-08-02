@@ -2,9 +2,13 @@ import mongoose from "mongoose";
 
 interface IProfileSchema {
   amount: number;
-  accountName: string;
+  name: string;
   accountType: string;
-  providerName: string;
+  provider: {
+    providerName: string;
+    providerCode: string;
+  };
+  user: mongoose.Types.ObjectId;
 }
 
 const profileSchema = new mongoose.Schema<IProfileSchema>(
@@ -13,7 +17,7 @@ const profileSchema = new mongoose.Schema<IProfileSchema>(
       type: Number,
       required: true,
     },
-    accountName: {
+    name: {
       type: String,
       required: true,
       trim: true,
@@ -22,9 +26,19 @@ const profileSchema = new mongoose.Schema<IProfileSchema>(
       type: String,
       required: true,
     },
-    providerName: {
-      type: String,
-      required: true,
+    provider: {
+      providerName: {
+        type: String,
+        required: true,
+      },
+      providerCode: {
+        type: String,
+        required: true,
+      },
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
     },
   },
   { timestamps: true }
