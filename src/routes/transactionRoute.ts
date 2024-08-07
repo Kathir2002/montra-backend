@@ -8,3 +8,5 @@ transactionRouter.post(
   upload.single("file"),
   Transaction.addTransaction
 );
+
+transactionRouter.post("/get-transactions", Transaction.getAllTransaction);

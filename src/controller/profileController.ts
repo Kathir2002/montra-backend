@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import ProfileModel from "../model/profileModel";
 import { AuthRequest } from "../routes/authRoute";
 import User from "../model/userModel";
+import { cleanData } from "../lib/functions";
 
 class profileController {
   async setup(req: AuthRequest, res: Response) {
@@ -54,7 +55,9 @@ class profileController {
         path: "account",
       });
 
-      return res.status(200).json({ rows: walletList?.account, success: true });
+      const walletData = cleanData(walletList?.account);
+
+      return res.status(200).json({ rows: walletData, success: true });
     } catch (err: any) {
       res.status(500).json({ message: err?.message, success: false });
     }

@@ -72,3 +72,11 @@ export function isValidEmail(email: string) {
   const regex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
   return regex.test(email);
 }
+
+export const cleanData = (data: any) => {
+  return data.map((item: any) => {
+    const plainObject = item.toObject ? item.toObject() : item;
+    const { _id, user, updatedAt, __v, ...rest } = plainObject;
+    return rest;
+  });
+};
