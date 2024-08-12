@@ -10,26 +10,5 @@
                 "1E:F6:5A:A4:6B:B4:AC:27:34:C7:DF:91:82:4B:CB:DD:D0:90:7A:94:E5:F4:DB:F7:BF:1C:AB:1F:32:3D:AF:65"
             ]
         }
-    },
-    {
-        "relation": [
-            "delegate_permission/common.get_login_creds"
-        ],
-        "target": {
-            "namespace": "web",
-            "site": "https://montra-hero.onrender.com"
-        }
-    },
-    {
-        "relation": [
-            "delegate_permission/common.get_login_creds"
-        ],
-        "target": {
-            "namespace": "android_app",
-            "package_name": "com.montra",
-            "sha256_cert_fingerprints": [
-                "1E:F6:5A:A4:6B:B4:AC:27:34:C7:DF:91:82:4B:CB:DD:D0:90:7A:94:E5:F4:DB:F7:BF:1C:AB:1F:32:3D:AF:65"
-            ]
-        }
     }
 ]
