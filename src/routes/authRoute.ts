@@ -8,7 +8,8 @@ export interface AuthRequest extends Request {
 }
 
 authRouter.post("/signup", Auth.signup);
-authRouter.post("/send-otp", Auth.sendOtp);
+authRouter.post("/verify-otp", Auth.verifyOtp);
+authRouter.post("/resend-otp", Auth.resendOtp);
 authRouter.post("/signin", Auth.login);
 authRouter.post("/forgot-password", Auth.forgotPassword);
 authRouter.post("/signin/google", Auth.loginWithGoogle);

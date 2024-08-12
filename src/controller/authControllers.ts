@@ -1,15 +1,60 @@
 import { Request, Response } from "express";
-import otpGenerator from "otp-generator";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../model/userModel";
-import { encryptDetails, isValidEmail, sendMail } from "../lib/functions";
+import {
+  encryptDetails,
+  isValidEmail,
+  sendMail,
+  sendVerificationEmail,
+} from "../lib/functions";
 import { AuthRequest } from "../routes/authRoute";
 import { OAuth2Client } from "google-auth-library";
-import OTP from "../model/otpModel";
 
 class auth {
   async signup(req: Request, res: Response) {
+    try {
+      const { email, name, password } = req.body;
+      if (!isValidEmail(email)) {
+        return res
+          ?.status(400)
+          .json({ message: "Enter a valid email address" });
+      }
+      // Check if user is already present
+      const checkUserPresent = await User.findOne({ email });
+      // If user found with provided email
+      if (checkUserPresent) {
+        return res.status(401).json({
+          success: false,
+          message: "User is already registered",
+        });
+      }
+      const salt = await bcrypt.genSalt();
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const verificationToken = Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+
+      const user: any = new User({
+        email,
+        password: hashedPassword,
+        name,
+        verificationToken,
+      });
+
+      await user.save();
+      await sendVerificationEmail(email, verificationToken, name);
+
+      res.status(201).json({
+        success: true,
+        message: "User created successfully",
+      });
+    } catch (error: any) {
+      console.log(error?.message);
+      return res.status(500).json({ success: false, message: error?.message });
+    }
+  }
+  async verifyOtp(req: Request, res: Response) {
     try {
       const { email, otp } = req.body;
 
@@ -27,33 +72,25 @@ class auth {
       }
 
       // Check if user already exists
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
+      const existingUser = await User.findOne({
+        email,
+        verificationToken: otp,
+      });
+      if (!existingUser) {
         return res.status(400).json({
           success: false,
-          message: "User already exists",
-        });
-      }
-      // Find the most recent OTP for the email
-      const response = await OTP.find({ email })
-        .sort({ createdAt: -1 })
-        .limit(1);
-      if (response.length === 0 || otp !== response[0].otp) {
-        return res.status(400).json({
-          success: false,
-          message: "The OTP is not valid",
+          message: "Invalid or expired verification code",
         });
       }
 
-      const user: any = await User.create({
-        email: email,
-        password: response[0]?.password,
-        name: response[0]?.name,
-      });
+      existingUser.isVerified = true;
+      existingUser.verificationToken = undefined;
+      await existingUser.save();
+
       const userData = {
-        email: user.email,
-        picture: user.picture,
-        name: user.name,
+        email: existingUser.email,
+        picture: existingUser.picture,
+        name: existingUser.name,
       };
       return res.status(200).json({
         user: userData,
@@ -97,8 +134,16 @@ class auth {
       if (!passwordMatched) {
         return res
           .status(400)
-          .json({ message: "Invalid password", success: false });
+          .json({ message: "Invalid credentials", success: false });
       }
+      if (!existingUser.isVerified) {
+        return res.status(400).json({
+          message: "Please verify your email account",
+          success: false,
+        });
+      }
+      existingUser.lastLogin = new Date();
+      await existingUser.save();
 
       const jwtToken = jwt.sign(
         {
@@ -165,6 +210,7 @@ class auth {
               email: payload?.email,
               picture: payload?.picture,
               name: payload?.name,
+              isVerified: true,
             });
             const jwtToken = jwt.sign(
               {
@@ -206,52 +252,6 @@ class auth {
         });
     } catch (error) {
       res.status(401).json({ message: "Invalid token" });
-    }
-  }
-
-  async sendOtp(req: Request, res: Response) {
-    try {
-      const { email, name, password } = req.body;
-      if (!isValidEmail(email)) {
-        return res
-          ?.status(400)
-          .json({ message: "Enter a valid email address" });
-      }
-      // Check if user is already present
-      const checkUserPresent = await User.findOne({ email });
-      // If user found with provided email
-      if (checkUserPresent) {
-        return res.status(401).json({
-          success: false,
-          message: "User is already registered",
-        });
-      }
-      let otp = otpGenerator.generate(6, {
-        upperCaseAlphabets: false,
-        lowerCaseAlphabets: false,
-        specialChars: false,
-      });
-      let result = await OTP.findOne({ otp: otp });
-      while (result) {
-        otp = otpGenerator.generate(6, {
-          upperCaseAlphabets: false,
-        });
-        result = await OTP.findOne({ otp: otp });
-      }
-      const salt = await bcrypt.genSalt();
-      const hashedPassword = await bcrypt.hash(password, salt);
-      const otpPayload = { email, otp, password: hashedPassword, name };
-
-      await OTP.create(otpPayload);
-
-      res.status(200).json({
-        success: true,
-        message: "OTP sent successfully",
-        otp,
-      });
-    } catch (error: any) {
-      console.log(error?.message);
-      return res.status(500).json({ success: false, message: error?.message });
     }
   }
 
@@ -482,6 +482,27 @@ class auth {
       res.status(200).json({
         success: true,
         message: "Password has been changed successfully",
+      });
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  async resendOtp(req: Request, res: Response) {
+    try {
+      const { email } = req.body;
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const user = await User.findOne({ email });
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      user.verificationToken = otp;
+      user.save();
+      sendVerificationEmail(email, otp, user?.name);
+      res.status(200).json({
+        success: true,
+        message: "OTP has been sent successfully",
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err?.message });

@@ -5,8 +5,11 @@ export interface IUserSchema {
   password: string;
   picture: string;
   isSetupDone: boolean;
-  account: Array<mongoose.Types.ObjectId>;
+  account: mongoose.Types.ObjectId;
   name: string;
+  verificationToken: string | undefined;
+  isVerified: boolean;
+  lastLogin: Date;
 }
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
@@ -37,7 +40,16 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       required: true,
       default: false,
     },
-    account: [{ type: mongoose.Schema.Types.ObjectId, ref: "Profile" }],
+    account: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
+    lastLogin: {
+      type: Date,
+      default: Date.now,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
+    verificationToken: String,
   },
   { timestamps: true }
 );

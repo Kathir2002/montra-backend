@@ -6,7 +6,7 @@ import { authRouter } from "./src/routes/authRoute";
 import { connectMongoDB } from "./src/lib/connectDb";
 import assetLink from "./src/constant/assetlinks.json";
 import cloud from "cloudinary";
-import { profileRouter } from "./src/routes/profileRoute";
+import { accountRouter } from "./src/routes/accountRoute";
 import { verifyToken } from "./src/middleware/verifyToken";
 import { transactionRouter } from "./src/routes/transactionRoute";
 
@@ -26,7 +26,7 @@ cloudinary.config({
 });
 
 app.use("/api/auth", authRouter);
-app.use("/api/user", verifyToken, profileRouter);
+app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
 
 app.use("/.well-known/assetlinks.json", (req, res) => {

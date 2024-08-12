@@ -3,6 +3,7 @@ import { uploadToCloud } from "../lib/upload";
 import TransactionModel from "../model/transactionModel";
 import { AuthRequest } from "../middleware/verifyToken";
 import { cleanData } from "../lib/functions";
+import AccountBalance from "../model/accountBalance";
 
 class transactionController {
   async addTransaction(req: AuthRequest, res: Response) {
@@ -41,6 +42,14 @@ class transactionController {
           .json({ success: false, message: "Please fill required fields" });
       }
       const parsedFrequency = frequency ? JSON.parse(frequency) : {};
+
+      const accountBalance = await AccountBalance.findOne({ userId: userId });
+      if (type === "Expense" && Number(accountBalance?.balance) < amount) {
+        return res.status(400).json({
+          success: false,
+          message: "You don't have enough money in your account",
+        });
+      }
 
       const newTransaction = new TransactionModel({
         user: userId,
@@ -86,14 +95,14 @@ class transactionController {
       res.status(500).json({ message: err?.message, success: false });
     }
   }
+
   async getAllTransaction(req: AuthRequest, res: Response) {
     try {
-      const { filterBy, sortBy, category, filterMonth } = req.body;
-
+      const { filterBy, sortBy, category, filterByMonth } = req.body;
       const userId = req._id;
+
       // Construct the sort object
       const sortOptions: any = {};
-
       if (sortBy) {
         if (sortBy === "Highest" || sortBy === "Lowest") {
           sortOptions["amount"] = sortBy === "Highest" ? -1 : 1;
@@ -104,47 +113,50 @@ class transactionController {
 
       // Construct the filter object
       const filterOptions: any = {};
-
-      // Handle filterBy (Assuming filterBy is for a specific field)
       if (filterBy) {
         filterOptions["transactionType"] = filterBy;
       }
-
-      // Handle category filtering (ensure category is a valid array)
       if (Array.isArray(category) && category.length > 0) {
         filterOptions["transactionFor"] = { $in: category };
       }
 
-      // Handle filterMonth (assuming it's a date string to filter by month)
-      if (filterMonth) {
-        const filterMonthDate = new Date(filterMonth);
+      // Determine date range filter
+      const now = new Date();
+      let start: Date, end: Date;
+
+      if (filterByMonth) {
+        const filterMonthDate = new Date(filterByMonth);
+
         if (!isNaN(filterMonthDate.getTime())) {
-          // Check if it's a valid date
-          const startOfMonth = new Date(
+          start = new Date(
             filterMonthDate.getFullYear(),
             filterMonthDate.getMonth(),
             1
           );
-          const endOfMonth = new Date(
+          end = new Date(
             filterMonthDate.getFullYear(),
             filterMonthDate.getMonth() + 1,
             0
           );
-          filterOptions["createdAt"] = { $gte: startOfMonth, $lte: endOfMonth };
+          end.setHours(23, 59, 59, 999);
         } else {
-          return res.status(400).json({ error: "Invalid filterMonth date" });
+          return res
+            .status(400)
+            .json({ error: "Invalid filterByDateOption date" });
         }
+        filterOptions["createdAt"] = { $gte: start, $lte: end };
       }
 
       const transactions = await TransactionModel.find({
         user: userId,
         ...filterOptions,
-      }).sort(sortOptions);
-      const transactionData = cleanData(transactions);
+      }).sort(
+        Object.keys(sortOptions).length > 0 ? sortOptions : { createdAt: -1 }
+      );
+      const transactionData = await cleanData(transactions);
       return res.status(200).json({ rows: transactionData, success: true });
     } catch (err: any) {
       console.log(err.message);
-
       return res.status(500).json({ message: err?.message, success: false });
     }
   }

@@ -1,4 +1,6 @@
 import mongoose from "mongoose";
+import AccountBalance from "./accountBalance";
+import AccountModel from "./accountModel";
 interface ITransactionSchema {
   from: string;
   to: string;
@@ -186,6 +188,49 @@ transactionSchema.pre("validate", function (next) {
 
   next();
 });
+
+transactionSchema.post("save", async function (doc: any) {
+  const month = doc.createdAt.toLocaleString("default", { month: "long" });
+  const year = doc.createdAt.getFullYear();
+
+  if (doc.transactionType === "Income") {
+    await handleIncome(doc, month, year);
+  } else if (doc.transactionType === "Expense") {
+    await handleExpense(doc, month, year);
+  }
+});
+
+async function handleIncome(doc: any, month: any, year: any) {
+  // Update AccountBalance for Income
+  await AccountBalance.findOneAndUpdate(
+    { userId: doc.user, month, year },
+    { $inc: { balance: doc.amount, totalIncome: doc.amount } },
+    { upsert: true, new: true }
+  );
+
+  // Update account balance in profileModel
+  await AccountModel.findOneAndUpdate(
+    { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
+    { $inc: { "bankAccounts.$.balance": doc.amount } },
+    { new: true } // Optional: Returns the updated document
+  );
+}
+
+async function handleExpense(doc: any, month: any, year: any) {
+  // Update AccountBalance for Expense
+  await AccountBalance.findOneAndUpdate(
+    { userId: doc.user, month, year },
+    { $inc: { balance: -doc.amount, totalExpenses: doc.amount } },
+    { upsert: true, new: true }
+  );
+
+  // Update account balance in profileModel
+  await AccountModel.findOneAndUpdate(
+    { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
+    { $inc: { "bankAccounts.$.balance": -doc.amount } },
+    { new: true } // Optional: Returns the updated document
+  );
+}
 
 const TransactionModel = mongoose.model("Transactions", transactionSchema);
 export default TransactionModel;
