@@ -9,4 +9,13 @@ transactionRouter.post(
   Transaction.addTransaction
 );
 
+transactionRouter.post(
+  "/update-transaction",
+  upload.single("file"),
+  Transaction.updateTransaction
+);
+
 transactionRouter.post("/get-transactions", Transaction.getAllTransaction);
+transactionRouter.post("/delete-transaction", Transaction.deleteTransaction);
+transactionRouter.get("/get-category", Transaction.getTransactionCategory);
+transactionRouter.post("/add-category", Transaction.addNewTransactionCategory);

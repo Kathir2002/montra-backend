@@ -159,6 +159,7 @@ class auth {
         email: existingUser.email,
         picture: existingUser.picture,
         isSetupDone: existingUser.isSetupDone,
+        currency: existingUser.currency,
       };
       const encryptedToken = encryptDetails(jwtToken);
       return res
@@ -184,6 +185,7 @@ class auth {
         email: user.email,
         picture: user.picture,
         isSetupDone: user?.isSetupDone,
+        currency: user.currency,
       };
       res.status(200).json({ user: userData, success: true });
     } catch (error) {
@@ -232,6 +234,7 @@ class auth {
             id: existingUser._id,
             isSetupDone: existingUser.isSetupDone,
             name: existingUser.name,
+            currency: existingUser.currency,
           };
           const jwtToken = jwt.sign(
             { _id: existingUser._id, email: existingUser.email },

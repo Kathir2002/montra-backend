@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import multer from "multer";
 import { promisify } from "util";
+import { mimeTypeMap } from "../constant/mimeTypes";
 
 export interface IDocument {
   imageUrl: string;
@@ -56,7 +57,7 @@ export const uploadToCloud = async (req: Request, res: Response) => {
             fileUrl: result?.secure_url,
             fileName: result?.original_filename,
             fileSize: result?.bytes,
-            fileFormat: result?.format,
+            fileFormat: mimeTypeMap[result?.format as string],
           });
         }
       );

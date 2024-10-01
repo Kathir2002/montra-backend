@@ -1,7 +1,6 @@
 import * as CryptoJS from "crypto-js";
 import dorenv from "dotenv";
 import nodemailer from "nodemailer";
-import Mail from "nodemailer/lib/mailer";
 dorenv.config();
 
 export interface MailOptionsInterface {
@@ -76,7 +75,7 @@ export function isValidEmail(email: string) {
 export const cleanData = (data: any) => {
   return data?.map((item: any) => {
     const plainObject = item.toObject ? item.toObject() : item;
-    const { _id, user, updatedAt, __v, ...rest } = plainObject;
+    const { user, updatedAt, __v, ...rest } = plainObject;
     return rest;
   });
 };

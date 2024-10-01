@@ -10,6 +10,16 @@ export interface IUserSchema {
   verificationToken: string | undefined;
   isVerified: boolean;
   lastLogin: Date;
+  currency: string;
+  transactionCategory: {
+    income: { categoryName: string; categoryId: string }[];
+    expense: { categoryName: string; categoryId: string }[];
+  };
+  notification: {
+    isExpenseAlert: boolean;
+    isBudgetAlert: boolean;
+    isTipsAndArticles: boolean;
+  };
 }
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
@@ -40,6 +50,11 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       required: true,
       default: false,
     },
+    currency: {
+      type: String,
+      required: true,
+      default: "INR",
+    },
     account: { type: mongoose.Schema.Types.ObjectId, ref: "Account" },
     lastLogin: {
       type: Date,
@@ -50,6 +65,65 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       default: false,
     },
     verificationToken: String,
+    notification: {
+      isBudgetAlert: {
+        type: Boolean,
+        default: true,
+      },
+      isExpenseAlert: {
+        type: Boolean,
+        default: true,
+      },
+      isTipsAndArticles: {
+        type: Boolean,
+        default: false,
+      },
+    },
+    transactionCategory: {
+      expense: {
+        type: [
+          {
+            categoryName: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            categoryId: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+          },
+        ],
+        default: [
+          { categoryName: "Rent", categoryId: "Rent" },
+          { categoryName: "Shopping", categoryId: "Shopping" },
+          { categoryName: "Transportation", categoryId: "Transportation" },
+          { categoryName: "Food", categoryId: "Food" },
+        ],
+      },
+      income: {
+        type: [
+          {
+            categoryName: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+            categoryId: {
+              type: String,
+              required: true,
+              trim: true,
+            },
+          },
+        ],
+        default: [
+          { categoryName: "Salary", categoryId: "Salary" },
+          { categoryName: "Interest", categoryId: "Interest" },
+          { categoryName: "Dividend", categoryId: "Dividend" },
+        ],
+      },
+    },
   },
   { timestamps: true }
 );

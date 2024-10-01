@@ -9,7 +9,8 @@ import cloud from "cloudinary";
 import { accountRouter } from "./src/routes/accountRoute";
 import { verifyToken } from "./src/middleware/verifyToken";
 import { transactionRouter } from "./src/routes/transactionRoute";
-
+import { budgetRouter } from "./src/routes/budgetRoutes";
+import "./src/helper/jobScheduler";
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,6 +29,7 @@ cloudinary.config({
 app.use("/api/auth", authRouter);
 app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
+app.use("/api/budget", verifyToken, budgetRouter);
 
 app.use("/.well-known/assetlinks.json", (req, res) => {
   res.status(200).json(assetLink);
