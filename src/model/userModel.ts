@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 export interface IUserSchema {
   email: string;
   password: string;
+  securityMethod: "PIN" | "FINGERPRINT";
   picture: string;
   isSetupDone: boolean;
   account: mongoose.Types.ObjectId;
@@ -65,6 +66,10 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       default: false,
     },
     verificationToken: String,
+    securityMethod: {
+      type: String,
+      default: "FINGERPRINT",
+    },
     notification: {
       isBudgetAlert: {
         type: Boolean,

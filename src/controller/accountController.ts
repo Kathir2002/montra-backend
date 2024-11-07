@@ -296,8 +296,7 @@ class accountController {
   async changeUserPreferences(req: AuthRequest, res: Response) {
     try {
       const userId = req._id;
-      const { currency, notification } = req.body;
-      const { isExpenseAlert, isBudgetAlert, isTipsAndArticles } = notification;
+      const { currency, notification, securityMethod } = req.body;
 
       const user = await User.findById(userId);
 
@@ -316,6 +315,9 @@ class accountController {
         });
       }
       if (notification) {
+        const { isExpenseAlert, isBudgetAlert, isTipsAndArticles } =
+          notification;
+
         if (isTipsAndArticles || typeof isTipsAndArticles == "boolean") {
           user.notification.isTipsAndArticles = isTipsAndArticles;
         } else if (isExpenseAlert || typeof isExpenseAlert == "boolean") {
@@ -328,6 +330,14 @@ class accountController {
           success: true,
           notification: user?.notification,
           message: "Notification preferences updated successfully",
+        });
+      }
+      if (securityMethod) {
+        user.securityMethod = securityMethod;
+        await user.save();
+        return res.status(200).json({
+          success: true,
+          message: "Security method updated successfully",
         });
       }
     } catch (err: any) {

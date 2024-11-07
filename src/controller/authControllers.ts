@@ -186,6 +186,7 @@ class auth {
         picture: user.picture,
         isSetupDone: user?.isSetupDone,
         currency: user.currency,
+        securityMethod: user?.securityMethod,
       };
       res.status(200).json({ user: userData, success: true });
     } catch (error) {
