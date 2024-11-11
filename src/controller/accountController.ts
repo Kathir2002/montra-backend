@@ -349,9 +349,7 @@ class accountController {
   async getUserNotificationPreference(req: AuthRequest, res: Response) {
     try {
       const userId = req._id;
-
       const user = await User.findById(userId);
-
       if (!user) {
         return res
           .status(404)

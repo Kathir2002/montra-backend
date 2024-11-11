@@ -54,6 +54,7 @@ class auth {
       return res.status(500).json({ success: false, message: error?.message });
     }
   }
+
   async verifyOtp(req: Request, res: Response) {
     try {
       const { email, otp } = req.body;
@@ -236,6 +237,7 @@ class auth {
             isSetupDone: existingUser.isSetupDone,
             name: existingUser.name,
             currency: existingUser.currency,
+            securityMethod: existingUser?.securityMethod,
           };
           const jwtToken = jwt.sign(
             { _id: existingUser._id, email: existingUser.email },
