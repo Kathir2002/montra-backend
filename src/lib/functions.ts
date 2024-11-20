@@ -217,3 +217,22 @@ export async function sendVerificationEmail(
     throw error;
   }
 }
+
+// Helper function to filter transactions
+export const getDateRange = (range: string) => {
+  const today = new Date();
+  switch (range) {
+    case "30days":
+      return { $gte: new Date(today.setDate(today.getDate() - 30)) };
+    case "60days":
+      return { $gte: new Date(today.setDate(today.getDate() - 60)) };
+    case "6months":
+      return { $gte: new Date(today.setMonth(today.getMonth() - 6)) };
+    case "1year":
+      return { $gte: new Date(today.setFullYear(today.getFullYear() - 1)) };
+    case "lifeTime":
+      return {}; // No date filter
+    default:
+      return {};
+  }
+};

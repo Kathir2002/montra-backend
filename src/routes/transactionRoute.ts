@@ -19,3 +19,4 @@ transactionRouter.post("/get-transactions", Transaction.getAllTransaction);
 transactionRouter.post("/delete-transaction", Transaction.deleteTransaction);
 transactionRouter.get("/get-category", Transaction.getTransactionCategory);
 transactionRouter.post("/add-category", Transaction.addNewTransactionCategory);
+transactionRouter.get("/export-transction", Transaction.exportTransactionData);

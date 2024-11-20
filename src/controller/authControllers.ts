@@ -207,6 +207,7 @@ class auth {
         })
         .then(async (ticket) => {
           const payload = ticket.getPayload();
+
           let existingUser = await User.findOne({ email: payload?.email });
 
           if (existingUser === null || !existingUser) {
