@@ -14,6 +14,7 @@ accountRouter.get("/get-wallet-list", Account.getWalletList);
 accountRouter.get("/get-account-balance", Account.getAccountBalance);
 accountRouter.post("/get-weekly-transactions", Account.getWeeklyTransactions);
 accountRouter.post("/change-preferences", Account.changeUserPreferences);
+accountRouter.post("/logout-user", Account.logoutHander);
 accountRouter.get(
   "/get-notification-preferences",
   Account.getUserNotificationPreference

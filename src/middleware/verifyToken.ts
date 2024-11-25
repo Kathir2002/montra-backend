@@ -1,9 +1,10 @@
 import { NextFunction, Request, Response } from "express";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { decryptDetails } from "../lib/functions";
+import mongoose from "mongoose";
 
 export interface AuthRequest extends Request {
-  _id?: string;
+  _id?: mongoose.Types.ObjectId;
 }
 
 export const verifyToken = async (

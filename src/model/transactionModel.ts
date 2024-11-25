@@ -291,14 +291,21 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
       if (budgetData?.length > 0) {
         // Calculate the difference
         const difference = updatedDoc.amount - originalDoc?.amount!;
+        const remainingAmount =
+          budgetData[0].budget - (budgetData[0].spent + difference);
+        const spentAmount = budgetData[0].budget - remainingAmount;
+        const spentPercent =
+          Math.sign(spentAmount) == -1
+            ? 100
+            : (spentAmount / budgetData[0].budget) * 100;
 
         await BudgetModel.findByIdAndUpdate(
           budgetData[0]?._id,
           {
             $inc: { spent: difference },
             $set: {
-              remaining:
-                budgetData[0].budget - (budgetData[0].spent + difference),
+              remaining: remainingAmount,
+              spentPercent: spentPercent,
             },
           },
           { new: true }
@@ -444,9 +451,17 @@ async function handleExpense(doc: any, month: any, fromDelete = false) {
     if (fromDelete) {
       budgetData.spent -= doc?.amount;
       budgetData.remaining = budgetData.budget + budgetData?.spent;
+      budgetData.spentPercent =
+        budgetData.spent > budgetData.budget
+          ? 100
+          : (budgetData.spent / budgetData.budget) * 100;
     } else {
       budgetData.spent += doc?.amount;
       budgetData.remaining = budgetData.budget - budgetData?.spent;
+      budgetData.spentPercent =
+        budgetData.spent > budgetData.budget
+          ? 100
+          : (budgetData.spent / budgetData.budget) * 100;
     }
     await budgetData.save();
   }

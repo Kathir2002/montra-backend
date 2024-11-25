@@ -1,7 +1,14 @@
 import * as CryptoJS from "crypto-js";
 import dorenv from "dotenv";
 import nodemailer from "nodemailer";
+import admin from "firebase-admin";
 dorenv.config();
+
+export interface IPushNotificationPayload {
+  title: string;
+  body: string;
+  data: string;
+}
 
 export interface MailOptionsInterface {
   from?: string;
@@ -236,3 +243,28 @@ export const getDateRange = (range: string) => {
       return {};
   }
 };
+
+export async function sendPushNotification(
+  payload: IPushNotificationPayload,
+  deviceToken: string
+) {
+  const { body, data, title } = payload;
+  try {
+    const message = {
+      notification: {
+        title: title,
+        body: body,
+      },
+      data: data || {}, // Optional additional data
+      token: deviceToken,
+    };
+
+    // Send a message to the device corresponding to the provided registration token
+    const response = await admin.messaging().send(message);
+    console.log("Successfully sent message:");
+    return response;
+  } catch (error) {
+    console.log("Error sending message:", error);
+    throw error;
+  }
+}

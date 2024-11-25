@@ -7,6 +7,7 @@ import AccountBalance from "../model/accountBalance";
 import TransactionModel from "../model/transactionModel";
 import mongoose from "mongoose";
 import moment from "moment";
+import DeviceTokenService from "./deviceTokenController";
 const ObjectId = mongoose.Types.ObjectId;
 
 class accountController {
@@ -362,6 +363,30 @@ class accountController {
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  // Logout from specific device
+  async logoutHander(req: AuthRequest, res: Response) {
+    try {
+      const { fcmToken } = req.body;
+      const userId = req?._id;
+
+      const result = await DeviceTokenService.logoutDevice(userId!, fcmToken);
+
+      if (result) {
+        res.status(200).json({
+          message: "Device logged out successfully",
+        });
+      } else {
+        res.status(404).json({
+          message: "Device token not found",
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({
+        message: "Failed to logout device",
+        error: error.message,
+      });
     }
   }
 }

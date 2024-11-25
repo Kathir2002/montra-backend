@@ -1,10 +1,11 @@
 import express, { Request, Response } from "express";
 import Auth from "../controller/authControllers";
 import { verifyToken } from "../middleware/verifyToken";
+import mongoose from "mongoose";
 export const authRouter = express.Router();
 
 export interface AuthRequest extends Request {
-  _id?: string;
+  _id?: mongoose.Types.ObjectId;
 }
 
 authRouter.post("/signup", Auth.signup);

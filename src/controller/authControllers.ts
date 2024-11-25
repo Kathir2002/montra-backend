@@ -10,6 +10,7 @@ import {
 } from "../lib/functions";
 import { AuthRequest } from "../routes/authRoute";
 import { OAuth2Client } from "google-auth-library";
+import DeviceTokenService from "./deviceTokenController";
 
 class auth {
   async signup(req: Request, res: Response) {
@@ -104,7 +105,17 @@ class auth {
   }
 
   async login(req: Request, res: Response) {
-    const { email, password }: { email: string; password: string } = req.body;
+    const {
+      email,
+      password,
+      fcmToken,
+      platform,
+      deviceModel,
+      osVersion,
+      appVersion,
+      appId,
+      manufacturer,
+    } = req.body;
 
     try {
       if (!isValidEmail(email)) {
@@ -153,6 +164,7 @@ class auth {
         },
         process.env.JWT_KEY as string
       );
+      const ipAddress = req?.ip as string;
 
       const userData = {
         id: existingUser._id,
@@ -163,6 +175,21 @@ class auth {
         currency: existingUser.currency,
       };
       const encryptedToken = encryptDetails(jwtToken);
+      await DeviceTokenService.registerDeviceToken(existingUser._id, fcmToken, {
+        platform,
+        deviceModel,
+        osVersion,
+        appVersion,
+        appId,
+        ipAddress,
+        manufacturer,
+      })
+        .then(() => {
+          console.log("Device token registered successfully");
+        })
+        .catch((err) => {
+          console.log("Error in push notification registration", err);
+        });
       return res
         .status(200)
         .json({ user: userData, token: encryptedToken, success: true });
@@ -198,6 +225,17 @@ class auth {
     try {
       const token = req.headers.authorization || req?.headers?.Authorization;
       const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
+      const {
+        fcmToken,
+        platform,
+        deviceModel,
+        osVersion,
+        appVersion,
+        appId,
+        manufacturer,
+      } = req.body;
+
+      const ipAddress = req?.ip as string;
 
       const client = new OAuth2Client(CLIENT_ID);
       await client
@@ -226,6 +264,25 @@ class auth {
             );
 
             const encryptedToken = encryptDetails(jwtToken);
+            await DeviceTokenService.registerDeviceToken(
+              newUser._id,
+              fcmToken,
+              {
+                platform,
+                deviceModel,
+                osVersion,
+                appVersion,
+                appId,
+                ipAddress,
+                manufacturer,
+              }
+            )
+              .then(() => {
+                console.log("Device token registered successfully");
+              })
+              .catch((err) => {
+                console.log("Error in push notification registration", err);
+              });
 
             return res
               .status(200)
@@ -246,6 +303,26 @@ class auth {
           );
 
           const encryptedToken = encryptDetails(jwtToken);
+          await DeviceTokenService.registerDeviceToken(
+            existingUser._id,
+            fcmToken,
+            {
+              platform,
+              deviceModel,
+              osVersion,
+              appVersion,
+              appId,
+              ipAddress,
+              manufacturer,
+            }
+          )
+            .then(() => {
+              console.log("Device token registered successfully");
+            })
+            .catch((err) => {
+              console.log("Error in push notification registration", err);
+            });
+
           return res
             .status(200)
             .json({ user: userData, token: encryptedToken, success: true });

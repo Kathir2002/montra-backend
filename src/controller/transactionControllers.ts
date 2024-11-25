@@ -5,11 +5,16 @@ import XLSX from "xlsx";
 import { uploadToCloud } from "../lib/upload";
 import TransactionModel from "../model/transactionModel";
 import { AuthRequest } from "../middleware/verifyToken";
-import { cleanData, getDateRange } from "../lib/functions";
+import {
+  cleanData,
+  getDateRange,
+  IPushNotificationPayload,
+} from "../lib/functions";
 import AccountBalance from "../model/accountBalance";
 import User from "../model/userModel";
 import BudgetModel from "../model/budgetModel";
 import moment from "moment";
+import DeviceTokenService from "./deviceTokenController";
 
 const calculateFileSize = (size: number) => {
   const units = ["Bytes", "KB", "MB"];
@@ -40,6 +45,12 @@ class transactionController {
       } = req.body;
 
       const userId = req._id;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
       let documet = undefined;
 
       if (!type) {
@@ -104,6 +115,13 @@ class transactionController {
       const save = await newTransaction.save();
 
       if (save) {
+        const data: IPushNotificationPayload = {
+          title: `Hai ${user?.name} New Transaction Added`,
+          body: `Transaction ${type} of ₹${amount} added successfully`,
+
+          data: "",
+        };
+        await DeviceTokenService.notifyAllDevices(userId!, data);
         return res
           .status(200)
           .json({ success: true, message: `${type} added successfully` });

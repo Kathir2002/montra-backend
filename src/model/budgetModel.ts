@@ -8,6 +8,7 @@ interface IMonthlyBudget {
   budget: number;
   spent: number;
   remaining: number;
+  spentPercent: number;
   month: Date;
   alertValue: number;
   isReceiveAlert: boolean;
@@ -32,6 +33,10 @@ const monthlyBudgetSchema = new mongoose.Schema<IMonthlyBudget>({
   spent: {
     type: Number,
     trim: true,
+    default: 0,
+  },
+  spentPercent: {
+    type: Number,
     default: 0,
   },
   remaining: {
@@ -89,7 +94,10 @@ monthlyBudgetSchema.post("findOneAndUpdate", async function () {
       // Update spent and remaining in the document
       updatedDoc.spent = totalExpenseForCategory;
       updatedDoc.remaining = updatedDoc.budget - totalExpenseForCategory;
-
+      updatedDoc.spentPercent =
+        updatedDoc?.spent > updatedDoc?.budget
+          ? 100
+          : (updatedDoc?.spent / updatedDoc?.budget) * 100;
       // Save the updated document
       await updatedDoc.save();
     }
@@ -114,6 +122,8 @@ monthlyBudgetSchema.post("save", async function () {
 
     await this.updateOne({
       spent: totalExpenseForCategory,
+      spentPercent:
+        this?.spent > this?.budget ? 100 : (this?.spent / this?.budget) * 100,
       remaining: this.budget - totalExpenseForCategory,
     });
   }

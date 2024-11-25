@@ -2,3 +2,6 @@ node_modules
 .env
 dist
 package-lock.json
+.vercel
+montra-dev-429606-firebase-adminsdk-opuej-f234f508aa.json
+Montra.ppk
