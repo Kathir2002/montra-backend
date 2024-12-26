@@ -253,33 +253,32 @@ transactionSchema.post("save", async function (doc) {
 transactionSchema.post("findOneAndUpdate", async function (doc) {
   const updatedDoc = await this.model.findOne(this.getQuery());
 
-  if (originalDoc?.amount !== updatedDoc.amount) {
+  if (originalDoc !== updatedDoc) {
     const month = doc.transactionDate;
     // Adjust the balance based on transaction type
     if (updatedDoc.transactionType === "Expense") {
-      const amountDifference = originalDoc?.amount! - updatedDoc.amount;
-      await AccountBalance.findOneAndUpdate(
-        {
-          userId: doc.user,
-          createdAt: {
-            $gte: moment(month).startOf("month"),
-            $lte: moment(month).endOf("month"),
-          },
-        },
-        {
-          $inc: { balance: amountDifference, totalExpenses: -amountDifference },
-        }
+      const amountDifference = originalDoc?.amount! - updatedDoc?.amount;
+      await AccountBalance.editTransaction(
+        doc?.user,
+        originalDoc?.amount!,
+        updatedDoc?.amount,
+        "Expense",
+        month.toISOString().slice(0, 7)
       );
+
       await AccountModel.findOneAndUpdate(
         { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
         {
           $inc: {
-            "bankAccounts.$.balance": amountDifference,
+            "bankAccounts.$.balance": amountDifference
+              ? amountDifference
+              : -updatedDoc?.amount,
             totalAccountBalance: amountDifference,
           },
         },
         { new: true } // Optional: Returns the updated document
       );
+
       const budgetData = await BudgetModel.find({
         userId: updatedDoc.user,
         category: updatedDoc.transactionFor,
@@ -313,24 +312,21 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
       }
     } else if (updatedDoc.transactionType === "Income") {
       const amountDifference = updatedDoc.amount - originalDoc?.amount!;
-      await AccountBalance.findOneAndUpdate(
-        {
-          userId: doc.user,
-          createdAt: {
-            $gte: moment(month).startOf("month"),
-            $lte: moment(month).endOf("month"),
-          },
-        },
-        {
-          $inc: { balance: amountDifference, totalIncome: amountDifference },
-        }
+      await AccountBalance.editTransaction(
+        doc?.user,
+        originalDoc?.amount!,
+        updatedDoc.amount,
+        "Income",
+        month.toISOString().slice(0, 7)
       );
 
       await AccountModel.findOneAndUpdate(
         { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
         {
           $inc: {
-            "bankAccounts.$.balance": amountDifference,
+            "bankAccounts.$.balance": amountDifference
+              ? amountDifference
+              : updatedDoc?.amount,
             totalAccountBalance: amountDifference,
           },
         },
@@ -358,23 +354,21 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
 });
 
 async function handleIncome(doc: any, month: any, fromDelete = false) {
-  // Update AccountBalance for Income
-  await AccountBalance.findOneAndUpdate(
-    {
-      userId: doc.user,
-      createdAt: {
-        $gte: moment(month).startOf("month"),
-        $lte: moment(month).endOf("month"),
-      },
-    },
-    {
-      $inc: {
-        balance: fromDelete ? -doc.amount : doc.amount,
-        totalIncome: fromDelete ? -doc.amount : doc.amount,
-      },
-    },
-    { upsert: true, new: true }
-  );
+  if (fromDelete) {
+    await AccountBalance.deleteTransaction(
+      doc?.user,
+      doc?.amount,
+      "Income",
+      month.toISOString().slice(0, 7)
+    );
+  } else {
+    await AccountBalance.updateBalance(
+      doc?.user,
+      doc?.amount,
+      "Income",
+      month.toISOString().slice(0, 7)
+    );
+  }
 
   // Update account balance in accounteModel
   await AccountModel.findOneAndUpdate(
@@ -409,23 +403,21 @@ async function handleTransfer(doc: any, month: any, fromDelete = false) {
 }
 
 async function handleExpense(doc: any, month: any, fromDelete = false) {
-  // Update AccountBalance for Expense
-  await AccountBalance.findOneAndUpdate(
-    {
-      userId: doc.user,
-      createdAt: {
-        $gte: moment(month).startOf("month"),
-        $lte: moment(month).endOf("month"),
-      },
-    },
-    {
-      $inc: {
-        balance: fromDelete ? doc.amount : -doc.amount,
-        totalExpenses: fromDelete ? -doc.amount : doc.amount,
-      },
-    },
-    { upsert: true, new: true }
-  );
+  if (fromDelete) {
+    await AccountBalance.deleteTransaction(
+      doc?.user,
+      doc?.amount,
+      "Expense",
+      month.toISOString().slice(0, 7)
+    );
+  } else {
+    await AccountBalance.updateBalance(
+      doc?.user,
+      doc?.amount,
+      "Expense",
+      month.toISOString().slice(0, 7)
+    );
+  }
 
   // Update account balance in profileModel
   await AccountModel.findOneAndUpdate(

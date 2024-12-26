@@ -123,7 +123,9 @@ monthlyBudgetSchema.post("save", async function () {
     await this.updateOne({
       spent: totalExpenseForCategory,
       spentPercent:
-        this?.spent > this?.budget ? 100 : (this?.spent / this?.budget) * 100,
+        totalExpenseForCategory >= this?.budget
+          ? 100
+          : (totalExpenseForCategory / this?.budget) * 100,
       remaining: this.budget - totalExpenseForCategory,
     });
   }

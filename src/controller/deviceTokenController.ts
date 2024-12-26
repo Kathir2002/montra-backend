@@ -4,6 +4,7 @@ import {
   IPushNotificationPayload,
   sendPushNotification,
 } from "../lib/functions";
+import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 
 interface IAdditionalInfo {
   platform: "ios" | "Android" | "web" | "desktop";
@@ -75,13 +76,19 @@ class DeviceTokenService {
   // Send notifications to all active devices
   static async notifyAllDevices(
     userId: mongoose.Types.ObjectId,
-    notificationPayload: IPushNotificationPayload
+    notificationPayload: IPushNotificationPayload,
+    android: AndroidConfig
   ) {
     const activeTokens = await DeviceToken.getActiveTokens(userId);
 
     const notificationPromises = activeTokens.map(async (token: IToken) => {
       try {
-        await sendPushNotification(notificationPayload, token?.fcmToken!);
+        await sendPushNotification(
+          notificationPayload,
+          token?.fcmToken!,
+          userId,
+          android
+        );
       } catch (error) {
         console.error(
           `Failed to send notification to token ${token.fcmToken}`,

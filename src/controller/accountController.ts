@@ -6,8 +6,8 @@ import AccountModel from "../model/accountModel";
 import AccountBalance from "../model/accountBalance";
 import TransactionModel from "../model/transactionModel";
 import mongoose from "mongoose";
-import moment from "moment";
 import DeviceTokenService from "./deviceTokenController";
+import { uploadToCloud } from "../lib/upload";
 const ObjectId = mongoose.Types.ObjectId;
 
 class accountController {
@@ -120,7 +120,7 @@ class accountController {
   async deleteBankAccount(req: AuthRequest, res: Response) {
     try {
       const userId = req._id;
-      const { bankAccountId, wallet } = req.body;
+      const { bankAccountId } = req.body;
 
       if (!bankAccountId) {
         return res.status(401).json({
@@ -199,30 +199,47 @@ class accountController {
   async getAccountBalance(req: AuthRequest, res: Response) {
     try {
       const { month }: any = req.query;
-
+      const monthDateObj = new Date(month);
       const userId = req._id;
       const data = await AccountBalance.find({
         userId: userId,
-        createdAt: {
-          $gte: moment(month).startOf("month"),
-          $lte: moment(month).endOf("month"),
-        },
       });
 
-      if (data.length === 0) {
+      if (!data.length) {
         return res.status(200).json({
           success: true,
           balanceData: { totalExpenses: 0, totalIncome: 0, balance: 0 },
         });
       }
-      const balanceData = await cleanData(data);
+
+      const filterDate = new Date(
+        monthDateObj.getFullYear(),
+        monthDateObj.getMonth() + 1,
+        0
+      );
+      const accountBalance = data?.find((datum) => datum?.balance)?.balance;
+
+      const filteredData = data?.filter((datum) => {
+        return datum?.month === filterDate.toISOString().slice(0, 7);
+      });
+
+      const balanceData = await cleanData(filteredData);
+      let cleanedBalanceData = balanceData[0];
+      if (!balanceData?.length) {
+        cleanedBalanceData = {
+          userId: userId,
+          balance: accountBalance,
+          month: filterDate.toISOString().slice(0, 7),
+          totalExpenses: 0,
+          totalIncome: 0,
+        };
+      }
 
       return res
         .status(200)
-        .json({ success: true, balanceData: balanceData[0] });
+        .json({ success: true, balanceData: cleanedBalanceData });
     } catch (err: any) {
       console.log(err);
-
       return res.status(500).json({ success: false, message: err?.message });
     }
   }
@@ -370,11 +387,24 @@ class accountController {
     try {
       const { fcmToken } = req.body;
       const userId = req?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      if (!fcmToken) {
+        return res
+          .status(400)
+          .json({ success: false, message: "FCM token is required" });
+      }
 
       const result = await DeviceTokenService.logoutDevice(userId!, fcmToken);
 
       if (result) {
         res.status(200).json({
+          success: true,
           message: "Device logged out successfully",
         });
       } else {
@@ -387,6 +417,65 @@ class accountController {
         message: "Failed to logout device",
         error: error.message,
       });
+    }
+  }
+  async updateUserDetails(req: AuthRequest, res: Response) {
+    try {
+      const { name, phoneNumber } = req.body;
+      const userId = req?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      let documet: any = undefined;
+
+      if (req.file) {
+        await uploadToCloud(req, res).then((response) => {
+          documet = response;
+        });
+      }
+
+      const data = await User.findByIdAndUpdate(
+        userId,
+        {
+          name: name,
+          picture: documet?.fileUrl,
+          phoneNumber: phoneNumber,
+        },
+        { new: true }
+      );
+
+      res.status(200).json({
+        data,
+        success: true,
+        message: "User details updated successfully",
+      });
+    } catch (err: any) {
+      console.log(err?.message);
+
+      res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  async deleteAccount(req: AuthRequest, res: Response) {
+    try {
+      const userId = req?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      user.isActive = false;
+      user.deactivatedAt = new Date();
+
+      return res.status(200).json({
+        message: "Account deactivated. Will be permanently deleted in 14 days.",
+        success: true,
+      });
+    } catch (err: any) {
+      return res?.status(500).json({ success: false, message: err?.message });
     }
   }
 }

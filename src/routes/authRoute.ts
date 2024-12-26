@@ -16,3 +16,4 @@ authRouter.post("/forgot-password", Auth.forgotPassword);
 authRouter.post("/signin/google", Auth.loginWithGoogle);
 authRouter.get("/user-details", verifyToken, Auth.userDetails);
 authRouter.post("/reset-password", verifyToken, Auth.restPassword);
+authRouter.post("/change-password", verifyToken, Auth.changePassword);

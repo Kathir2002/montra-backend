@@ -2,12 +2,15 @@ import { Response } from "express";
 import { Parser } from "json2csv";
 import XLSX from "xlsx";
 
-import { uploadToCloud } from "../lib/upload";
+import { deleteCloudinaryDocument, uploadToCloud } from "../lib/upload";
 import TransactionModel from "../model/transactionModel";
 import { AuthRequest } from "../middleware/verifyToken";
+import quotes from "../constant/quotes.json";
+
 import {
   cleanData,
   getDateRange,
+  getRandomItem,
   IPushNotificationPayload,
 } from "../lib/functions";
 import AccountBalance from "../model/accountBalance";
@@ -15,6 +18,13 @@ import User from "../model/userModel";
 import BudgetModel from "../model/budgetModel";
 import moment from "moment";
 import DeviceTokenService from "./deviceTokenController";
+import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
+
+interface CategoryInterface {
+  _id: string;
+  categoryName: string;
+  categoryId: string;
+}
 
 const calculateFileSize = (size: number) => {
   const units = ["Bytes", "KB", "MB"];
@@ -115,13 +125,26 @@ class transactionController {
       const save = await newTransaction.save();
 
       if (save) {
-        const data: IPushNotificationPayload = {
-          title: `Hai ${user?.name} New Transaction Added`,
-          body: `Transaction ${type} of ₹${amount} added successfully`,
-
-          data: "",
-        };
-        await DeviceTokenService.notifyAllDevices(userId!, data);
+        if (user?.notification?.isExpenseAlert && type !== "Transfer") {
+          const data: IPushNotificationPayload = {
+            title: `Hai ${user?.name} New Transaction Added`,
+            body: `Transaction ${type} of ₹${amount} added successfully`,
+            data: {
+              screen: type === "Expense" ? "ExpenseDetails" : "IncomeDetails",
+              params: save._id.toString(),
+            },
+          };
+          const androidConfig: AndroidConfig = {
+            notification: {
+              channelId: type == "Expense" ? "expense" : "income",
+            },
+          };
+          await DeviceTokenService.notifyAllDevices(
+            userId!,
+            data,
+            androidConfig
+          );
+        }
         return res
           .status(200)
           .json({ success: true, message: `${type} added successfully` });
@@ -298,7 +321,6 @@ class transactionController {
 
   async deleteTransaction(req: AuthRequest, res: Response) {
     try {
-      const userId = req._id;
       const { transactionId } = req.body;
       if (!transactionId) {
         return res.status(401).json({
@@ -309,6 +331,9 @@ class transactionController {
       const transaction = await TransactionModel.findByIdAndDelete(
         transactionId
       );
+      if (transaction?.document?.fileUrl) {
+        deleteCloudinaryDocument(transaction?.document?.fileUrl);
+      }
       if (!transaction) {
         return res
           .status(404)
@@ -325,7 +350,7 @@ class transactionController {
   async getTransactionCategory(req: AuthRequest, res: Response) {
     try {
       const { type, isAdd } = req.query;
-      let isAddBoolValue = JSON.parse(isAdd as any);
+      let isAddBoolValue = JSON.parse(isAdd as string);
       if (!type) {
         return res
           .status(400)
@@ -343,17 +368,20 @@ class transactionController {
           .status(200)
           .json({ rows: category?.transactionCategory?.income, success: true });
       } else if (type === "Budget") {
-        const budget = await BudgetModel.find({ userId: user });
+        const budgets = await BudgetModel.find({ userId: user });
 
-        if (budget?.length > 0 && isAddBoolValue) {
-          let data;
-          budget?.map((item) => {
-            data = category?.transactionCategory?.expense?.filter(
-              (res) => res?.categoryId !== item?.category
-            );
-          });
+        if (budgets?.length > 0 && isAddBoolValue) {
+          // Filter categories to exclude those in user's expense categories
+          const filteredCategories =
+            category?.transactionCategory?.expense?.filter((category) => {
+              return !budgets?.some(
+                (item) => item.category === category?.categoryId
+              );
+            });
 
-          return res.status(200).json({ rows: data, success: true });
+          return res
+            .status(200)
+            .json({ rows: filteredCategories, success: true });
         }
 
         return res.status(200).json({
@@ -361,6 +389,32 @@ class transactionController {
           success: true,
         });
       }
+    } catch (err: any) {
+      return res.status(500).json({ message: err?.message, success: false });
+    }
+  }
+
+  async getTransactionDetails(req: AuthRequest, res: Response) {
+    try {
+      const { id } = req.query;
+      const userId = req._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "User not found", success: false });
+      }
+      const transaction = await TransactionModel.findById(id);
+      if (!transaction) {
+        return res
+          .status(404)
+          .json({ message: "Transaction not found", success: false });
+      }
+
+      if (transaction.user.toString() !== userId?.toString()) {
+        return res.status(403).json({ message: "Forbidden", success: false });
+      }
+      return res.status(200).json({ transaction, success: true });
     } catch (err: any) {
       return res.status(500).json({ message: err?.message, success: false });
     }
@@ -446,147 +500,169 @@ class transactionController {
         query.transactionDate = getDateRange(dateRange as string);
       }
       const transactionData = await TransactionModel.find(query).lean().exec();
-      // Transform data and handle optional fields
-      const flattenedData = transactionData.map((transaction) => {
-        const accountName = bankAccounts.find(
-          (bankAccount: any) =>
-            bankAccount?.provider?.providerCode === transaction.wallet
-        )?.provider?.providerName;
 
-        const baseData: any = {
-          "Transaction For": transaction.transactionFor || "",
-          Amount: transaction.amount || 0,
-          Notes: transaction.notes || "",
-          Type: transaction.transactionType || "",
-          Date: transaction.transactionDate
-            ? moment(new Date(transaction.transactionDate)).format(
-                "DD MMM, hh:mm A"
-              )
-            : "",
-          Account: accountName || "",
-          "Payment Mode": transaction.paymentMode || "",
-          Description: transaction.description || "",
-        };
-
-        // Add frequency fields if they exist
-        if (transaction.frequency) {
-          if (transaction?.frequency.frequencyType === "yearly") {
-            baseData["Frequency"] = `${
-              transaction.frequency.frequencyType
-            } - Every ${moment()
-              .month(Number(transaction.frequency.month) - 1)
-              .date(Number(transaction.frequency.date))
-              .format("MMM, Do")}`;
-          } else if (transaction?.frequency.frequencyType === "monthly") {
-            baseData["Frequency"] = `${
-              transaction.frequency.frequencyType
-            } - Every ${moment()
-              .date(Number(transaction.frequency.date))
-              .format("Do")}`;
-          } else if (transaction?.frequency.frequencyType === "weekly") {
-            baseData[
-              "Frequency"
-            ] = `${transaction.frequency.frequencyType} - Every ${transaction.frequency.day}`;
-          } else if (transaction.frequency.frequencyType === "daily") {
-            baseData[
-              "Frequency"
-            ] = `${transaction.frequency.frequencyType} - Every Day`;
-          }
-          baseData["End Date"] = moment(transaction.endAfter).format(
-            "D MMMM YYYY"
-          );
-        }
-
-        // Add document fields if they exist
-        if (transaction.document) {
-          if (transaction.document.fileName) {
-            baseData["File Name"] = transaction.document.fileName;
-          }
-          if (transaction.document.fileUrl) {
-            // Here we transform the file URL into a hyperlink format
-            baseData["File URL"] = {
-              t: "s",
-              v: transaction.document.fileUrl,
-              l: { Target: transaction.document.fileUrl },
-            };
-          }
-          if (transaction.document.fileSize) {
-            baseData["Size"] = calculateFileSize(transaction.document.fileSize);
-          }
-        }
-
-        return baseData;
-      });
-
-      // Get dynamic fields from the data
-      const fields = Array.from(
-        new Set(flattenedData.flatMap((obj) => Object.keys(obj)))
-      );
-
-      if (fileFormat === "CSV") {
-        const json2csvParser = new Parser({
-          fields,
-          delimiter: ",",
-          quote: '"',
-          header: true,
-        });
-
-        const csv = json2csvParser.parse(flattenedData);
-
-        res.setHeader("Content-Type", "text/csv");
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename=transactions_${Date.now()}.csv`
-        );
-
-        // Send CSV directly
-        return res.send(csv);
+      if (!transactionData?.length) {
+        return res?.status(400).json("No transactions found!");
       } else {
-        // Create workbook and worksheet
-        const workbook = XLSX.utils.book_new();
-        const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+        // Transform data and handle optional fields
+        const flattenedData = transactionData.map((transaction) => {
+          const accountName = bankAccounts.find(
+            (bankAccount: any) =>
+              bankAccount?.provider?.providerCode === transaction.wallet
+          )?.provider?.providerName;
 
-        // Calculate column widths dynamically
-        const colWidths = Object.keys(
-          flattenedData.reduce((acc, row) => {
-            // Merge all field names from all rows
-            Object.keys(row).forEach((key) => {
-              acc[key] = Math.max(
-                acc[key] || 0,
-                row[key] ? String(row[key]).length : 0 // Get max length between current and new value
+          const baseData: any = {
+            "Transaction For": transaction.transactionFor || "",
+            Amount: transaction.amount || 0,
+            Notes: transaction.notes || "",
+            Type: transaction.transactionType || "",
+            Date: transaction.transactionDate
+              ? moment(new Date(transaction.transactionDate)).format(
+                  "DD MMM, hh:mm A"
+                )
+              : "",
+            Account: accountName || "",
+            "Payment Mode": transaction.paymentMode || "",
+            Description: transaction.description || "",
+          };
+
+          // Add frequency fields if they exist
+          if (transaction.frequency) {
+            if (transaction?.frequency.frequencyType === "yearly") {
+              baseData["Frequency"] = `${
+                transaction.frequency.frequencyType
+              } - Every ${moment()
+                .month(Number(transaction.frequency.month) - 1)
+                .date(Number(transaction.frequency.date))
+                .format("MMM, Do")}`;
+            } else if (transaction?.frequency.frequencyType === "monthly") {
+              baseData["Frequency"] = `${
+                transaction.frequency.frequencyType
+              } - Every ${moment()
+                .date(Number(transaction.frequency.date))
+                .format("Do")}`;
+            } else if (transaction?.frequency.frequencyType === "weekly") {
+              baseData[
+                "Frequency"
+              ] = `${transaction.frequency.frequencyType} - Every ${transaction.frequency.day}`;
+            } else if (transaction.frequency.frequencyType === "daily") {
+              baseData[
+                "Frequency"
+              ] = `${transaction.frequency.frequencyType} - Every Day`;
+            }
+            baseData["End Date"] = moment(transaction.endAfter).format(
+              "D MMMM YYYY"
+            );
+          }
+
+          // Add document fields if they exist
+          if (transaction.document) {
+            if (transaction.document.fileName) {
+              baseData["File Name"] = transaction.document.fileName;
+            }
+            if (transaction.document.fileUrl) {
+              // Here we transform the file URL into a hyperlink format
+              baseData["File URL"] = {
+                t: "s",
+                v: transaction.document.fileUrl,
+                l: { Target: transaction.document.fileUrl },
+              };
+            }
+            if (transaction.document.fileSize) {
+              baseData["Size"] = calculateFileSize(
+                transaction.document.fileSize
               );
-            });
-            return acc;
-          }, {})
-        ).map((key) => {
-          // Set width to the max length of content + padding
-          return { wch: Math.max(key.length, 15) + 5 }; // Add padding and ensure a minimum width
+            }
+          }
+
+          return baseData;
         });
 
-        worksheet["!cols"] = colWidths;
-        // Add worksheet to workbook
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
-
-        // Generate buffer
-        const excelBuffer = XLSX.write(workbook, {
-          bookType: "xlsx",
-          type: "buffer",
-          bookSST: false,
-        });
-
-        // Set response headers
-        res.setHeader(
-          "Content-Type",
-          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        );
-        res.setHeader(
-          "Content-Disposition",
-          `attachment; filename=transactions_${Date.now()}.xlsx`
+        // Get dynamic fields from the data
+        const fields = Array.from(
+          new Set(flattenedData.flatMap((obj) => Object.keys(obj)))
         );
 
-        // Send the file
-        res.send(excelBuffer);
+        if (fileFormat === "CSV") {
+          const json2csvParser = new Parser({
+            fields,
+            delimiter: ",",
+            quote: '"',
+            header: true,
+          });
+
+          const csv = json2csvParser.parse(flattenedData);
+
+          res.setHeader("Content-Type", "text/csv");
+          res.setHeader(
+            "Content-Disposition",
+            `attachment; filename=transactions_${Date.now()}.csv`
+          );
+
+          // Send CSV directly
+          return res.send(csv);
+        } else {
+          // Create workbook and worksheet
+          const workbook = XLSX.utils.book_new();
+          const worksheet = XLSX.utils.json_to_sheet(flattenedData);
+
+          // Calculate column widths dynamically
+          const colWidths = Object.keys(
+            flattenedData.reduce((acc, row) => {
+              // Merge all field names from all rows
+              Object.keys(row).forEach((key) => {
+                acc[key] = Math.max(
+                  acc[key] || 0,
+                  row[key] ? String(row[key]).length : 0 // Get max length between current and new value
+                );
+              });
+              return acc;
+            }, {})
+          ).map((key) => {
+            // Set width to the max length of content + padding
+            return { wch: Math.max(key.length, 15) + 5 }; // Add padding and ensure a minimum width
+          });
+
+          worksheet["!cols"] = colWidths;
+          // Add worksheet to workbook
+          XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
+
+          // Generate buffer
+          const excelBuffer = XLSX.write(workbook, {
+            bookType: "xlsx",
+            type: "buffer",
+            bookSST: false,
+          });
+
+          // Set response headers
+          res.setHeader(
+            "Content-Type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          );
+          res.setHeader(
+            "Content-Disposition",
+            `attachment; filename=transactions_${Date.now()}.xlsx`
+          );
+
+          // Send the file
+          res.send(excelBuffer);
+        }
       }
+    } catch (err: any) {
+      return res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  async getQuote(req: AuthRequest, res: Response) {
+    try {
+      const userId = req?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          ?.status(404)
+          .json({ success: false, message: "User not found!" });
+      }
+      const quote = getRandomItem(quotes.quotes);
+      return res.status(200).json({ success: true, quote });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err?.message });
     }

@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
 import Account from "../controller/accountController";
+import { upload } from "../lib/upload";
 
 export const accountRouter = express.Router();
 
@@ -18,4 +19,9 @@ accountRouter.post("/logout-user", Account.logoutHander);
 accountRouter.get(
   "/get-notification-preferences",
   Account.getUserNotificationPreference
+);
+accountRouter.post(
+  "/update-user-details",
+  upload.single("file"),
+  Account.updateUserDetails
 );

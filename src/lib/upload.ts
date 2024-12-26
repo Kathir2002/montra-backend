@@ -66,3 +66,24 @@ export const uploadToCloud = async (req: Request, res: Response) => {
     res.status(400).json({ error: "No file uploaded" });
   }
 };
+
+const getPublicIdFromUrl = (url: string) => {
+  // Remove the Cloudinary domain and folder structure
+  const regex = /\/upload\/(?:v\d+\/)?(.+?)\.[a-z]+$/; // Matches after /upload/ and before the extension
+  const match = url.match(regex);
+  return match ? match[1] : null;
+};
+
+export const deleteCloudinaryDocument = async (url: string) => {
+  try {
+    const publicId = getPublicIdFromUrl(url);
+    if (publicId) {
+      const result = await cloudinary.uploader.destroy(publicId);
+      console.log("Delete result:", result);
+      return result;
+    }
+  } catch (error) {
+    console.error("Error deleting image:", error);
+    throw error;
+  }
+};

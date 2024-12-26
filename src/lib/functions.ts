@@ -2,12 +2,17 @@ import * as CryptoJS from "crypto-js";
 import dorenv from "dotenv";
 import nodemailer from "nodemailer";
 import admin from "firebase-admin";
+import DeviceToken from "../model/deviceFCMTokenModel";
+import mongoose from "mongoose";
+import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 dorenv.config();
 
 export interface IPushNotificationPayload {
   title: string;
   body: string;
-  data: string;
+  data: {
+    [key: string]: string;
+  };
 }
 
 export interface MailOptionsInterface {
@@ -246,7 +251,9 @@ export const getDateRange = (range: string) => {
 
 export async function sendPushNotification(
   payload: IPushNotificationPayload,
-  deviceToken: string
+  deviceToken: string,
+  userId: mongoose.Types.ObjectId,
+  android: AndroidConfig
 ) {
   const { body, data, title } = payload;
   try {
@@ -255,6 +262,7 @@ export async function sendPushNotification(
         title: title,
         body: body,
       },
+      android: android,
       data: data || {}, // Optional additional data
       token: deviceToken,
     };
@@ -263,8 +271,22 @@ export async function sendPushNotification(
     const response = await admin.messaging().send(message);
     console.log("Successfully sent message:");
     return response;
-  } catch (error) {
-    console.log("Error sending message:", error);
-    throw error;
+  } catch (error: any) {
+    if (error?.message == "Requested entity was not found.") {
+      await DeviceToken.deleteToken(userId, deviceToken);
+    } else {
+      throw error;
+    }
   }
 }
+
+export const getRandomItem = <T>(array: T[]): T => {
+  return array[Math.floor(Math.random() * array.length)];
+};
+
+export const generateColor = () => {
+  const hue = Math.floor(Math.random() * 360); // Random hue between 0 and 359
+  const saturation = 70; // Fixed saturation for vibrant colors
+  const lightness = 50; // Fixed lightness for balance
+  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+};

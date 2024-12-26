@@ -5,11 +5,14 @@ export interface IUserSchema {
   password: string;
   securityMethod: "PIN" | "FINGERPRINT";
   picture: string;
+  phoneNumber?: number;
   isSetupDone: boolean;
   account: mongoose.Types.ObjectId;
   name: string;
   verificationToken: string | undefined;
   isVerified: boolean;
+  isActive: boolean;
+  deactivatedAt: Date | null;
   lastLogin: Date;
   currency: string;
   transactionCategory: {
@@ -25,6 +28,8 @@ export interface IUserSchema {
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
   {
+    deactivatedAt: { type: Date, default: null },
+    isActive: { type: Boolean, default: true },
     name: {
       type: String,
       required: true,
@@ -41,10 +46,15 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       required: false,
       trim: true,
     },
+    phoneNumber: {
+      type: String,
+      required: false,
+      trim: true,
+    },
     picture: {
       type: String,
       default:
-        "https://uxwing.com/wp-content/themes/uxwing/download/peoples-avatars/default-account-picture-grey-male-icon.png",
+        "https://png.pngtree.com/png-vector/20221203/ourmid/pngtree-cartoon-style-female-user-profile-icon-vector-illustraton-png-image_6489286.png",
     },
     isSetupDone: {
       type: Boolean,
@@ -68,7 +78,7 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
     verificationToken: String,
     securityMethod: {
       type: String,
-      default: "FINGERPRINT",
+      default: "PIN",
     },
     notification: {
       isBudgetAlert: {
@@ -81,7 +91,7 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       },
       isTipsAndArticles: {
         type: Boolean,
-        default: false,
+        default: true,
       },
     },
     transactionCategory: {

@@ -2,17 +2,20 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import { config } from "dotenv";
 import { firebase } from "./src/firebase";
+import cloud from "cloudinary";
+import path from "path";
+
 firebase.messaging();
 config();
 import { authRouter } from "./src/routes/authRoute";
 import { connectMongoDB } from "./src/lib/connectDb";
-import assetLink from "./src/constant/assetlinks.json";
-import cloud from "cloudinary";
 import { accountRouter } from "./src/routes/accountRoute";
 import { verifyToken } from "./src/middleware/verifyToken";
 import { transactionRouter } from "./src/routes/transactionRoute";
 import { budgetRouter } from "./src/routes/budgetRoutes";
 import "./src/helper/jobScheduler";
+import "./src/helper/notificationScheduler";
+import "./src/helper/budgetNotificationScheduler";
 const app = express();
 
 app.use(express.json());
@@ -34,10 +37,6 @@ app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
 app.use("/api/budget", verifyToken, budgetRouter);
 
-app.use("/.well-known/assetlinks.json", (req, res) => {
-  res.status(200).json(assetLink);
-});
-
 app.get("/", async (req, res) => {
   res.status(200).json({ message: "Server is running" });
 });
@@ -52,13 +51,4 @@ app.listen(port, () => {
   console.log(`Server is running on port ${port}`);
 });
 
-// Create the handler function
-const handler = async (req: Request, res: Response) => {
-  // This is important - we need to call the express app as a handler
-  return new Promise((resolve, reject) => {
-    app(req, res);
-    res.on("finish", resolve);
-  });
-};
-
-export default handler;
+export default app;

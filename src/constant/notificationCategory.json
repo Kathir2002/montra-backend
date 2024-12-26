@@ -1,0 +1,174 @@
+{
+    "notifications": [
+        {
+            "category": "Daily Tips",
+            "titles": [
+                {
+                    "title": "💡 Daily Money Tip",
+                    "body": "Your daily dose of financial wisdom awaits!"
+                },
+                {
+                    "title": "💰 Smart Money Minute",
+                    "body": "Quick tip to boost your financial health"
+                },
+                {
+                    "title": "🎯 Financial Focus",
+                    "body": "Here's your money management insight for today"
+                }
+            ]
+        },
+        {
+            "category": "Savings Reminders",
+            "titles": [
+                {
+                    "title": "🏦 Savings Check-In",
+                    "body": "Time to review your savings progress"
+                },
+                {
+                    "title": "🎮 Savings Challenge",
+                    "body": "Ready for today's saving challenge?"
+                },
+                {
+                    "title": "💪 Savings Boost",
+                    "body": "Let's strengthen your savings today"
+                }
+            ]
+        },
+        {
+            "category": "Budget Tracking",
+            "titles": [
+                {
+                    "title": "📊 Budget Buddy",
+                    "body": "Time to check your spending"
+                },
+                {
+                    "title": "🎯 Budget Checkpoint",
+                    "body": "Stay on track with your financial goals"
+                },
+                {
+                    "title": "📈 Money Monitor",
+                    "body": "Your budget needs attention"
+                }
+            ]
+        },
+        {
+            "category": "Investment Updates",
+            "titles": [
+                {
+                    "title": "📈 Investment Insight",
+                    "body": "Your daily market update is here"
+                },
+                {
+                    "title": "💎 Wealth Builder",
+                    "body": "Check your investment progress"
+                },
+                {
+                    "title": "🎯 Portfolio Pulse",
+                    "body": "Time for your investment review"
+                }
+            ]
+        },
+        {
+            "category": "Weekly Reviews",
+            "titles": [
+                {
+                    "title": "📅 Weekly Money Review",
+                    "body": "Let's review your financial progress"
+                },
+                {
+                    "title": "🎯 Weekly Win Check",
+                    "body": "See how your finances performed this week"
+                },
+                {
+                    "title": "📊 Week in Review",
+                    "body": "Your financial week at a glance"
+                }
+            ]
+        },
+        {
+            "category": "Monthly Checkups",
+            "titles": [
+                {
+                    "title": "📆 Monthly Money Check",
+                    "body": "Time for your monthly financial review"
+                },
+                {
+                    "title": "🎯 Monthly Milestone",
+                    "body": "Let's review your monthly progress"
+                },
+                {
+                    "title": "📈 Monthly Master Check",
+                    "body": "Your monthly financial health check awaits"
+                }
+            ]
+        },
+        {
+            "category": "Goal Reminders",
+            "titles": [
+                {
+                    "title": "🎯 Goal Checker",
+                    "body": "Track your financial goal progress"
+                },
+                {
+                    "title": "⭐ Goal Guardian",
+                    "body": "Stay focused on your money goals"
+                },
+                {
+                    "title": "🌟 Goal Update",
+                    "body": "Check your progress toward financial freedom"
+                }
+            ]
+        },
+        {
+            "category": "Expense Tracking",
+            "titles": [
+                {
+                    "title": "💰 Expense Explorer",
+                    "body": "Time to log your daily expenses"
+                },
+                {
+                    "title": "📝 Expense Check",
+                    "body": "Don't forget to track your spending"
+                },
+                {
+                    "title": "🔍 Spending Scanner",
+                    "body": "Let's review your recent expenses"
+                }
+            ]
+        },
+        {
+            "category": "Motivation",
+            "titles": [
+                {
+                    "title": "✨ Money Motivation",
+                    "body": "Your daily dose of financial inspiration"
+                },
+                {
+                    "title": "🌟 Wealth Wisdom",
+                    "body": "Inspiring thoughts for financial success"
+                },
+                {
+                    "title": "💫 Financial Focus",
+                    "body": "Stay motivated on your money journey"
+                }
+            ]
+        },
+        {
+            "category": "Educational",
+            "titles": [
+                {
+                    "title": "📚 Money Mastery",
+                    "body": "Learn something new about finance today"
+                },
+                {
+                    "title": "🎓 Finance Facts",
+                    "body": "Expand your financial knowledge"
+                },
+                {
+                    "title": "💡 Money Minute",
+                    "body": "Quick financial lesson of the day"
+                }
+            ]
+        }
+    ]
+}

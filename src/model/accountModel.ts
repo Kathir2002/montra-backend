@@ -1,6 +1,5 @@
 import mongoose from "mongoose";
 import AccountBalance from "./accountBalance";
-import moment from "moment";
 
 interface IAccountSchema {
   totalAccountBalance: number;
@@ -68,6 +67,7 @@ accountSchema.post("save", async function (doc) {
     await this.updateOne({
       totalAccountBalance: totalBalance,
     });
+
     // Update or create the AccountBalance document for the user
     await AccountBalance.findOneAndUpdate(
       {
@@ -75,6 +75,7 @@ accountSchema.post("save", async function (doc) {
       },
       {
         balance: totalBalance,
+        month: new Date().toISOString().slice(0, 7),
       },
       { upsert: true, new: true }
     );
