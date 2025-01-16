@@ -8,3 +8,5 @@ Montra.ppk
 # Local Netlify folder
 .netlify
 .deployment
+temp
+uploads

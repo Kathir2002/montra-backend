@@ -22,3 +22,4 @@ transactionRouter.get("/details", Transaction.getTransactionDetails);
 transactionRouter.post("/add-category", Transaction.addNewTransactionCategory);
 transactionRouter.get("/export-transction", Transaction.exportTransactionData);
 transactionRouter.get("/get-random-quote", Transaction.getQuote);
+transactionRouter.post("/delete-document", Transaction.deleteDocument);

@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import AccountBalance from "./accountBalance";
 
-interface IAccountSchema {
+export interface IAccountSchema {
   totalAccountBalance: number;
   bankAccounts: {
     balance: number;
+    _id?: mongoose.Types.ObjectId;
     name: string;
     accountType: string;
     provider: {

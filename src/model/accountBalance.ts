@@ -47,63 +47,6 @@ const AccountBalanceSchema = new mongoose.Schema<IAccountBalanceSchema>(
 
 AccountBalanceSchema.index({ userId: 1, month: 1 }, { unique: true });
 
-// // Static method to update balance based on a transaction
-// AccountBalanceSchema.statics.updateBalance = async function (
-//   userId,
-//   amount,
-//   transactionType,
-//   month
-// ) {
-//   // Fetch all account balances for the user, sorted by month
-//   const accountBalances = await this.find({ userId }).sort({ month: 1 });
-
-//   // Find the balance for the target month
-//   const targetMonthData = accountBalances.find(
-//     (entry: any) => entry.month === month
-//   );
-
-//   // Update the target month balance
-//   if (targetMonthData) {
-//     if (transactionType === "Income") {
-//       targetMonthData.balance += amount;
-//       targetMonthData.totalIncome += amount;
-//     } else if (transactionType === "Expense") {
-//       targetMonthData.balance -= amount;
-//       targetMonthData.totalExpenses += amount;
-//     }
-//     await targetMonthData.save();
-//   } else {
-//     // If no data exists for the target month, create a new document
-//     const previousMonthData = accountBalances[accountBalances.length - 1]; // Last month's data
-//     const newBalance = {
-//       userId,
-//       balance:
-//         transactionType === "Income"
-//           ? (previousMonthData?.balance || 0) + amount
-//           : (previousMonthData?.balance || 0) - amount,
-//       totalIncome: transactionType === "Income" ? amount : 0,
-//       totalExpenses: transactionType === "Expense" ? amount : 0,
-//       month,
-//     };
-//     await this.create(newBalance);
-//   }
-
-//   // Propagate balance changes to subsequent months
-//   let cumulativeBalanceChange = transactionType === "Income" ? amount : -amount;
-//   let updateRequired = false;
-
-//   for (const entry of accountBalances) {
-//     if (updateRequired || entry.month > month) {
-//       entry.balance += cumulativeBalanceChange;
-//       await entry.save();
-//       updateRequired = true;
-//     }
-
-//     // Start propagating changes once we reach the affected month
-//     if (entry.month === month) updateRequired = true;
-//   }
-// };
-
 // Static method to update balance based on a transaction
 AccountBalanceSchema.statics.updateBalance = async function (
   userId,

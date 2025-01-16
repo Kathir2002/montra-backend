@@ -5,6 +5,7 @@ import admin from "firebase-admin";
 import DeviceToken from "../model/deviceFCMTokenModel";
 import mongoose from "mongoose";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
+import Mail from "nodemailer/lib/mailer";
 dorenv.config();
 
 export interface IPushNotificationPayload {
@@ -20,6 +21,9 @@ export interface MailOptionsInterface {
   to: string;
   subject: string;
   html: string;
+  fileContent?: string;
+  fileName?: string;
+  fileType?: string;
 }
 
 export const decryptDetails = (data: string) => {
@@ -51,7 +55,14 @@ export const encryptDetails = (data: string) => {
   }
 };
 
-export const sendMail = ({ from, html, subject, to }: MailOptionsInterface) => {
+export const sendMail = ({
+  html,
+  subject,
+  to,
+  fileContent,
+  fileName,
+  fileType,
+}: MailOptionsInterface) => {
   let mailTransporter = nodemailer.createTransport({
     host: "smtp.gmail.com",
     port: 587,
@@ -63,16 +74,26 @@ export const sendMail = ({ from, html, subject, to }: MailOptionsInterface) => {
     },
   });
 
-  const mailOptions: MailOptionsInterface = {
+  const mailOptions: Mail.Options = {
     from: "montra.service@gmail.com",
     to: to,
     subject: subject,
     html: html,
   };
 
+  if (fileContent && fileName && fileType) {
+    mailOptions["attachments"] = [
+      {
+        filename: fileName,
+        content: fileContent,
+        contentType: fileType,
+      },
+    ];
+  }
+
   mailTransporter.sendMail(mailOptions, (err) => {
     if (err) {
-      console.log(err.message);
+      console.log(err?.message);
     } else {
       console.log("Email has sent");
     }
@@ -99,7 +120,7 @@ export async function sendVerificationEmail(
   name: string
 ) {
   try {
-    const mailResponse = await sendMail({
+    const mailResponse = sendMail({
       html: `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -243,7 +264,7 @@ export const getDateRange = (range: string) => {
     case "1year":
       return { $gte: new Date(today.setFullYear(today.getFullYear() - 1)) };
     case "lifeTime":
-      return {}; // No date filter
+      return { $lte: today }; // No date filter
     default:
       return {};
   }
@@ -284,9 +305,9 @@ export const getRandomItem = <T>(array: T[]): T => {
   return array[Math.floor(Math.random() * array.length)];
 };
 
-export const generateColor = () => {
-  const hue = Math.floor(Math.random() * 360); // Random hue between 0 and 359
-  const saturation = 70; // Fixed saturation for vibrant colors
-  const lightness = 50; // Fixed lightness for balance
-  return `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+export const formatCurrency = (amount: number, currency = "USD") => {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+  }).format(amount);
 };

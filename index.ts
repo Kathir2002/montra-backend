@@ -16,6 +16,8 @@ import { budgetRouter } from "./src/routes/budgetRoutes";
 import "./src/helper/jobScheduler";
 import "./src/helper/notificationScheduler";
 import "./src/helper/budgetNotificationScheduler";
+import "./src/helper/attachmentDeleteScheduler";
+import Transaction from "./src/controller/transactionControllers";
 const app = express();
 
 app.use(express.json());
@@ -30,13 +32,14 @@ cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
+  secure: true,
 });
 
 app.use("/api/auth", authRouter);
 app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
 app.use("/api/budget", verifyToken, budgetRouter);
-
+app.get("/download/:fileName", Transaction.downloadTransction);
 app.get("/", async (req, res) => {
   res.status(200).json({ message: "Server is running" });
 });

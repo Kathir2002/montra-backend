@@ -4,8 +4,14 @@ import AccountModel from "./accountModel";
 import moment from "moment";
 import BudgetModel from "./budgetModel";
 export interface ITransactionSchema {
-  from: { wallet: string; paymentMode: string };
-  to: { wallet: string; paymentMode: string };
+  from: {
+    wallet: { id: mongoose.Types.ObjectId; walletName: string };
+    paymentMode: string;
+  };
+  to: {
+    wallet: { id: mongoose.Types.ObjectId; walletName: string };
+    paymentMode: string;
+  };
   notes: string;
   user: mongoose.Types.ObjectId;
   transactionType: "Income" | "Expense" | "Transfer";
@@ -14,7 +20,10 @@ export interface ITransactionSchema {
   endAfter: Date;
   amount: number;
   transactionFor: string;
-  wallet: string;
+  wallet: {
+    id: mongoose.Types.ObjectId;
+    walletName: string;
+  };
   paymentMode: string;
   description: string;
   frequency: {
@@ -23,12 +32,14 @@ export interface ITransactionSchema {
     date: number;
     month: string;
   };
-  document: {
-    fileName: string;
-    fileUrl: string;
-    fileFormat: string;
-    fileSize: number;
-  };
+  document:
+    | {
+        fileName: string;
+        fileUrl: string;
+        fileFormat: string;
+        fileSize: number;
+      }
+    | undefined;
 }
 
 function isEmpty(obj: any) {
@@ -60,11 +71,20 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
         trim: true,
       },
       wallet: {
-        type: String,
-        required: function () {
-          return this.transactionType === "Transfer";
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: function () {
+            return this.transactionType === "Transfer";
+          },
+          trim: true,
         },
-        trim: true,
+        walletName: {
+          type: String,
+          required: function () {
+            return this.transactionType === "Transfer";
+          },
+          trim: true,
+        },
       },
     },
     to: {
@@ -76,11 +96,20 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
         trim: true,
       },
       wallet: {
-        type: String,
-        required: function () {
-          return this.transactionType === "Transfer";
+        id: {
+          type: mongoose.Schema.Types.ObjectId,
+          required: function () {
+            return this.transactionType === "Transfer";
+          },
+          trim: true,
         },
-        trim: true,
+        walletName: {
+          type: String,
+          required: function () {
+            return this.transactionType === "Transfer";
+          },
+          trim: true,
+        },
       },
     },
     isRepeat: {
@@ -126,11 +155,23 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
       },
     },
     wallet: {
-      type: String,
-      required: function () {
-        return (
-          this.transactionType === "Expense" || this.transactionType == "Income"
-        );
+      id: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: function () {
+          return (
+            this.transactionType === "Expense" ||
+            this.transactionType == "Income"
+          );
+        },
+      },
+      walletName: {
+        type: String,
+        required: function () {
+          return (
+            this.transactionType === "Expense" ||
+            this.transactionType == "Income"
+          );
+        },
       },
     },
     paymentMode: {
@@ -159,12 +200,27 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
       },
       fileName: {
         type: String,
+        required: function () {
+          return (
+            this?.document && this.document?.fileUrl?.startsWith("https://")
+          );
+        },
       },
       fileFormat: {
         type: String,
+        required: function () {
+          return (
+            this?.document && this.document?.fileUrl?.startsWith("https://")
+          );
+        },
       },
       fileSize: {
         type: Number,
+        required: function () {
+          return (
+            this?.document && this.document?.fileUrl?.startsWith("https://")
+          );
+        },
       },
     },
   },
@@ -267,7 +323,7 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
       );
 
       await AccountModel.findOneAndUpdate(
-        { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
+        { user: doc.user, "bankAccounts._id": doc?.wallet?.id },
         {
           $inc: {
             "bankAccounts.$.balance": amountDifference
@@ -321,7 +377,7 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
       );
 
       await AccountModel.findOneAndUpdate(
-        { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
+        { user: doc.user, "bankAccounts._id": doc?.wallet?.id },
         {
           $inc: {
             "bankAccounts.$.balance": amountDifference
@@ -338,14 +394,14 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
       await AccountModel.findOneAndUpdate(
         {
           user: doc.user,
-          "bankAccounts.provider.providerCode": doc?.from?.wallet,
+          "bankAccounts._id": doc?.from?.wallet?.id,
         },
         { $inc: { "bankAccounts.$.balance": fromDifference } }
       );
       await AccountModel.findOneAndUpdate(
         {
           user: doc.user,
-          "bankAccounts.provider.providerCode": doc?.to?.wallet,
+          "bankAccounts._id": doc?.to?.wallet?.id,
         },
         { $inc: { "bankAccounts.$.balance": toDifference } }
       );
@@ -372,7 +428,7 @@ async function handleIncome(doc: any, month: any, fromDelete = false) {
 
   // Update account balance in accounteModel
   await AccountModel.findOneAndUpdate(
-    { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
+    { user: doc.user, "bankAccounts._id": doc?.wallet?.id },
     {
       $inc: {
         "bankAccounts.$.balance": fromDelete ? -doc.amount : doc.amount,
@@ -386,7 +442,7 @@ async function handleIncome(doc: any, month: any, fromDelete = false) {
 async function handleTransfer(doc: any, month: any, fromDelete = false) {
   // Update account balance in profileModel
   await AccountModel.findOneAndUpdate(
-    { user: doc.user, "bankAccounts.provider.providerCode": doc?.from?.wallet },
+    { user: doc.user, "bankAccounts._id": doc?.from?.wallet?.id },
     {
       $inc: { "bankAccounts.$.balance": fromDelete ? doc.amount : -doc.amount },
     },
@@ -394,7 +450,7 @@ async function handleTransfer(doc: any, month: any, fromDelete = false) {
   );
 
   await AccountModel.findOneAndUpdate(
-    { user: doc.user, "bankAccounts.provider.providerCode": doc?.to?.wallet },
+    { user: doc.user, "bankAccounts._id": doc?.to?.wallet?.id },
     {
       $inc: { "bankAccounts.$.balance": fromDelete ? -doc.amount : doc.amount },
     },
@@ -421,7 +477,7 @@ async function handleExpense(doc: any, month: any, fromDelete = false) {
 
   // Update account balance in profileModel
   await AccountModel.findOneAndUpdate(
-    { user: doc.user, "bankAccounts.provider.providerCode": doc.wallet },
+    { user: doc.user, "bankAccounts._id": doc.wallet?.id },
     {
       $inc: {
         "bankAccounts.$.balance": fromDelete ? doc.amount : -doc.amount,

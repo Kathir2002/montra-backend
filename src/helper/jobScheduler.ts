@@ -42,7 +42,7 @@ const getUser = async () => {
                     // endAfter: transaction?.endAfter,
                     amount: transaction?.amount,
                     transactionFor: transaction?.transactionFor,
-                    wallet: transaction?.wallet,
+                    wallet: transaction?.wallet?.id,
                     description: transaction?.description,
                     // frequency: JSON.stringify(transaction?.frequency),
                     type: transaction?.transactionType,

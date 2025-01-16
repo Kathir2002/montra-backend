@@ -11,7 +11,166 @@ import {
 import { AuthRequest } from "../routes/authRoute";
 import { OAuth2Client } from "google-auth-library";
 import DeviceTokenService from "./deviceTokenController";
+import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
+import mongoose from "mongoose";
+import moment from "moment";
 
+interface ISendReactivateAccountPayload {
+  email: string;
+  loginDate: Date;
+  name: string;
+  device: string;
+  _id: mongoose.Types.ObjectId;
+  lastLoginDate: Date;
+}
+
+const accountReactivateMailSender = async (
+  user: ISendReactivateAccountPayload
+) => {
+  const helpCenter = `${process.env.DEEPLINK_URL}/help-center`;
+  const securitySettingsUrl = `${process.env.DEEPLINK_URL}/profile/settings/security`;
+  sendMail({
+    html: `
+    <!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Reactivation Confirmation</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #7F3DFF;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .content {
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .success-message {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #1d72b8;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .security-note {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1 style="color: #FFFFFF;">Welcome Back! Your Account is Active Again</h1>
+        </div>
+        <div class="content">
+            <p>Hello ${user?.name},</p>
+
+            <div class="success-message">
+                <p>Great news! Your account has been successfully reactivated following your recent login on
+                    ${moment(user?.lastLoginDate).format(
+                      "dddd D MMMM YYYY  HH:mm"
+                    )}.</p>
+            </div>
+
+            <p>Your account has been fully restored with all your previous settings and data. You can now continue using
+                all our services as normal.</p>
+
+            <div class="security-note">
+                <p><strong>Security Notice:</strong> This account reactivation was triggered by a successful login from:
+                </p>
+                <ul>
+                    <li>Device: ${user?.device}</li>
+                    <li>Time: ${moment(user?.loginDate).format(
+                      "dddd D MMMM YYYY  HH:mm"
+                    )}</li>
+                </ul>
+            </div>
+<div style="text-align:center">
+            <a href=${securitySettingsUrl} class="button">Go to Your Account</a>
+</div>
+            <p>What's next?</p>
+            <ul>
+                <li>Review your account settings</li>
+                <li>Update your notification preferences</li>
+                <li>Check out any new features or updates you might have missed</li>
+            </ul>
+
+            <p>If you have any questions or concerns, our support team is here to help:</p>
+            <a href="mailto:montra.service@gmail.com">montra.service@gmail.com</a>
+        </div>
+        <div class="footer">
+            <p>This email was sent by <b>Montra</b></p>
+            <p>If you need any assistance, please visit our <a href=${helpCenter}>Help Center</a></p>
+        </div>
+    </div>
+</body>
+
+</html>
+    `,
+    subject: "Account Successfully Reactivated - Welcome Back to Montra",
+    to: user?.email,
+  });
+  const data = {
+    title: "Welcome Back! ✨",
+    body: "Account restored successfully. Tap to view your profile.",
+    data: {
+      screen: "BottomTab",
+      subScreen: "Profile",
+    },
+  };
+  const androidConfig: AndroidConfig = {
+    notification: {
+      channelId: "account",
+    },
+  };
+  await DeviceTokenService.notifyAllDevices(user?._id, data, androidConfig);
+};
 class auth {
   async signup(req: Request, res: Response) {
     try {
@@ -154,13 +313,24 @@ class auth {
           success: false,
         });
       }
-      existingUser.lastLogin = new Date();
+      const loginDate = new Date();
+      existingUser.lastLogin = loginDate;
 
       // If account was deactivated, reactivate it
       if (!existingUser.isActive) {
         existingUser.isActive = true;
         existingUser.deactivatedAt = null;
+        const userData = {
+          email: existingUser?.email,
+          loginDate,
+          lastLoginDate: existingUser?.lastLogin,
+          name: existingUser?.name,
+          device: `${manufacturer} (${deviceModel})`,
+          _id: existingUser?._id,
+        };
+        await accountReactivateMailSender(userData);
       }
+
       await existingUser.save();
 
       const jwtToken = jwt.sign(
@@ -203,6 +373,7 @@ class auth {
       return res.status(500).json({ message: error?.message });
     }
   }
+
   async userDetails(req: AuthRequest, res: Response) {
     const email = req._id;
 
@@ -228,9 +399,12 @@ class auth {
       res.status(500).json({ message: "Can't fetch user details" });
     }
   }
-  async loginWithGoogle(req: AuthRequest, res: Response) {
+
+  async loginWithGoogle(req: any, res: Response) {
     try {
-      const token = req.headers.authorization || req?.headers?.Authorization;
+      const token =
+        req.headers.authorization?.split(" ")[1] ||
+        req.headers.Authorization?.split(" ")[1];
       const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
       const {
         fcmToken,
@@ -329,7 +503,24 @@ class auth {
             .catch((err) => {
               console.log("Error in push notification registration", err);
             });
+          const loginDate = new Date();
+          existingUser.lastLogin = loginDate;
 
+          // If account was deactivated, reactivate it
+          if (!existingUser.isActive) {
+            existingUser.isActive = true;
+            existingUser.deactivatedAt = null;
+            const userData = {
+              email: existingUser?.email,
+              loginDate,
+              lastLoginDate: existingUser?.lastLogin,
+              name: existingUser?.name,
+              device: `${manufacturer} (${deviceModel})`,
+              _id: existingUser?._id,
+            };
+            await accountReactivateMailSender(userData);
+          }
+          await existingUser.save();
           return res
             .status(200)
             .json({ user: userData, token: encryptedToken, success: true });

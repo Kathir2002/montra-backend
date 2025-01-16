@@ -1,10 +1,7 @@
 import cron from "node-cron";
 import DeviceTokenService from "../controller/deviceTokenController";
 import User from "../model/userModel";
-import {
-  AndroidConfig,
-  AndroidNotification,
-} from "firebase-admin/lib/messaging/messaging-api";
+import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import BudgetModel from "../model/budgetModel";
 import moment from "moment";
 
@@ -60,6 +57,5 @@ function scheduleNotification(cronExpression: string) {
     { timezone: "Asia/Kolkata", recoverMissedExecutions: false }
   );
 }
-// const cronExpression = "* * * * *";
 const cronExpression = "30 18 * * *";
 scheduleNotification(cronExpression);

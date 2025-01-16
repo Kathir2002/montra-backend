@@ -1,13 +1,19 @@
 import { Response } from "express";
 import { AuthRequest } from "../routes/authRoute";
 import User from "../model/userModel";
-import { cleanData } from "../lib/functions";
+import {
+  cleanData,
+  IPushNotificationPayload,
+  sendMail,
+} from "../lib/functions";
 import AccountModel from "../model/accountModel";
 import AccountBalance from "../model/accountBalance";
 import TransactionModel from "../model/transactionModel";
 import mongoose from "mongoose";
 import DeviceTokenService from "./deviceTokenController";
 import { uploadToCloud } from "../lib/upload";
+import moment from "moment";
+import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 const ObjectId = mongoose.Types.ObjectId;
 
 class accountController {
@@ -113,7 +119,6 @@ class accountController {
         .json({ message: "User profile updated successfully!", success: true });
     } catch (err: any) {
       console.log(err);
-
       return res.status(500).json({ success: false, message: err?.message });
     }
   }
@@ -122,17 +127,43 @@ class accountController {
       const userId = req._id;
       const { bankAccountId } = req.body;
 
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ message: "User not found", success: false });
+      }
+
       if (!bankAccountId) {
         return res.status(401).json({
           message: "Bank account id is required to delete bank account",
           success: false,
         });
       }
+
       const ObjectId = mongoose.Types.ObjectId;
+
+      const transactionData = await TransactionModel?.find({
+        "wallet.id": new ObjectId(bankAccountId),
+      });
+      if (transactionData.length > 0) {
+        return res.status(400).json({
+          message: "Cannot delete bank account with existing transactions",
+          success: false,
+        });
+      }
 
       const accountDoc: any = await AccountModel.findOne({
         user: new ObjectId(userId),
       });
+
+      if (accountDoc?.bankAccounts?.length === 1) {
+        return res.status(400).json({
+          message:
+            "You need to have at least one account. This account cannot be deleted.",
+          success: false,
+        });
+      }
 
       if (accountDoc && accountDoc.bankAccounts.length > 0) {
         const accountBalanceToDelete =
@@ -147,7 +178,8 @@ class accountController {
             $inc: {
               totalAccountBalance: -accountBalanceToDelete,
             },
-          }
+          },
+          { new: true }
         );
         if (accountData) {
           await AccountBalance.updateOne(
@@ -161,6 +193,7 @@ class accountController {
             }
           );
         }
+
         return res.status(200).json({
           success: true,
           message: "Bank account deleted successfully",
@@ -458,7 +491,7 @@ class accountController {
       res.status(500).json({ success: false, message: err?.message });
     }
   }
-  async deleteAccount(req: AuthRequest, res: Response) {
+  async deactiveAccount(req: AuthRequest, res: Response) {
     try {
       const userId = req?._id;
       const user = await User.findById(userId);
@@ -468,7 +501,128 @@ class accountController {
           .json({ success: false, message: "User not found" });
       }
       user.isActive = false;
-      user.deactivatedAt = new Date();
+      const deactivationDate = new Date();
+      user.deactivatedAt = deactivationDate;
+      await user.save();
+
+      const deletionDate = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000);
+      const loginUrl = `${process.env.DEEPLINK_URL}/signin`;
+      const helpCenter = `${process.env.DEEPLINK_URL}/help-center`;
+      sendMail({
+        html: `<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Deactivation Notice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            margin: 0;
+            padding: 0;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #7F3DFF;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .content {
+            padding: 20px;
+            background-color: #ffffff;
+            border: 1px solid #e9ecef;
+        }
+
+        .footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            border-radius: 0 0 5px 5px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #007bff;
+            color: #ffffff;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .warning {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1 style="color: #FFFFFF;">Account Deactivation Notice</h1>
+        </div>
+        <div class="content">
+            <p>Hello ${user?.name},</p>
+
+            <p>We're writing to confirm that your account has been deactivated as requested on ${moment(
+              deactivationDate
+            ).format("dddd D MMMM YYYY  HH:mm")}.</p>
+
+            <p><span class="warning">Important:</span> Your account will be permanently deleted after 14 days (on
+                ${moment(deletionDate).format("DD MMM YYYY")}).</p>
+            <p>If you change your mind, you can reactivate your account at any time during this 14-day period by simply
+                logging back in to your account.</p>
+            <div style="text-align: center;">
+                <a href=${loginUrl} class="button">Log In to Reactivate</a>
+            </div>
+
+            <p>If you take no action, your account and all associated data will be permanently deleted after the 14-day
+                period.</p>
+
+            <p>If you didn't request this deactivation, please contact our support team immediately:</p>
+            <a href="mailto:montra.service@gmail.com">montra.service@gmail.com</a>
+        </div>
+        <div class="footer">
+            <p>This email was sent by <b>Montra</b></p>
+            <p>If you need any assistance, please visit our <a href=${helpCenter}>Help Center</a></p>
+        </div>
+    </div>
+</body>
+</html>`,
+        subject:
+          "Action Required: Your Account Has Been Deactivated - 14 Days to Reactivate",
+        to: user?.email!,
+      });
+
+      const data: IPushNotificationPayload = {
+        title: "Account Deactivated 🔒",
+        body: "Your account will be deleted in 14 days. Log in now to cancel the deletion process.",
+        data: {},
+      };
+      const androidConfig: AndroidConfig = {
+        notification: {
+          channelId: "account",
+        },
+      };
+      await DeviceTokenService.notifyAllDevices(
+        user?._id!,
+        data,
+        androidConfig
+      );
 
       return res.status(200).json({
         message: "Account deactivated. Will be permanently deleted in 14 days.",
