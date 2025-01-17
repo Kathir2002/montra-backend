@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.ts",
   "scripts": {
-    "start": "nodemon index.ts"
+    "start": "NODE_OPTIONS='--max-old-space-size=4096' nodemon index.ts"
   },
   "keywords": [],
   "author": "",
