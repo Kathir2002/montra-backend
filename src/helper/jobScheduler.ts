@@ -13,7 +13,7 @@ const getUser = async () => {
     if (user?._id) {
       const transactions = await TransactionModel.find({
         user: user._id,
-        transactionType: "Expense" || "Income",
+        transactionType: { $in: ["Expense", "Income"] },
       });
 
       transactions.forEach((transaction) => {
