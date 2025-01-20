@@ -405,7 +405,10 @@ class auth {
       const token =
         req.headers.authorization?.split(" ")[1] ||
         req.headers.Authorization?.split(" ")[1];
-      const CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT;
+      const CLIENT_ID =
+        process.env.NODE_ENV === "development"
+          ? process.env.DEV_GOOGLE_OAUTH_CLIENT
+          : process.env.PROD_GOOGLE_OAUTH_CLIENT;
       const {
         fcmToken,
         platform,
