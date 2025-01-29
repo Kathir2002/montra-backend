@@ -2,9 +2,11 @@
   "name": "expensetrackerbackend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.ts",
+  "main": "dist/index.js",
   "scripts": {
-    "start": "nodemon index.ts"
+    "start": "node dist/index.js",
+    "build": "tsc",
+    "dev": "nodemon index.ts"
   },
   "keywords": [],
   "author": "",
@@ -47,6 +49,7 @@
     "dotenv": "^16.4.5",
     "nodemon": "^3.1.4",
     "npm": "^10.8.2",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   }
 }
