@@ -495,12 +495,15 @@ class transactionController {
           success: true,
         });
       } else if (type === "All") {
-        const data: any = [];
+        const data: any = {
+          income: [],
+          expense: [],
+        };
         category?.transactionCategory?.expense?.map((res) => {
-          data?.push(res?.categoryName);
+          data?.expense?.push(res?.categoryName);
         });
         category?.transactionCategory?.income?.map((res) => {
-          data?.push(res?.categoryName);
+          data?.income?.push(res?.categoryName);
         });
         return res.status(200).json({ rows: data, success: true });
       }
@@ -617,7 +620,6 @@ class transactionController {
       }
 
       const transactionData = await TransactionModel.find(query).lean().exec();
-      console.log(query, transactionData);
       if (!transactionData?.length) {
         return res?.status(400).json({
           message: "No transactions found to download!",

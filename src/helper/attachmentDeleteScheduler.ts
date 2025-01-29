@@ -19,18 +19,13 @@ const attachmentDeleteScheduler = (cronExpression: string) => {
         const filePath = path.join(normalizedPath, file.name);
         await fs.access(filePath);
         const timestampNum = parseInt(file?.name?.match(/\d+/)![0]);
-        console.log(
-          file.isFile(),
-          Date.now(),
-          timestampNum + fileHandler.getExpiryTime()
-        );
 
         if (
           file.isFile() &&
           Date.now() > timestampNum + fileHandler.getExpiryTime()
         ) {
           console.log("File Expired", file.name);
-          // fs.unlink(filePath).catch(console.error);
+          fs.unlink(filePath).catch(console.error);
         }
       });
     },
