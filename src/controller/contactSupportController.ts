@@ -18,6 +18,7 @@ interface Message {
   timestamp: Date;
   replyTo?: IReply;
   senderId: mongoose.Types.ObjectId;
+  isRead: boolean;
 }
 
 class contactSupportController {
@@ -389,6 +390,7 @@ class contactSupportController {
             ? replyMap.get(reply.replyTo.toString())
             : null, // Attach referenced reply
           senderId: reply.sender,
+          isRead: reply?.isRead,
         };
       });
 
@@ -464,6 +466,7 @@ class contactSupportController {
           replyTo: reply.replyTo
             ? replyMap.get(reply.replyTo.toString())
             : null, // Attach referenced reply
+          isRead: reply?.isRead,
         });
       });
 
