@@ -19,11 +19,13 @@ export interface IUserSchema {
     income: { categoryName: string; categoryId: string }[];
     expense: { categoryName: string; categoryId: string }[];
   };
+  isAdmin: boolean;
   notification: {
     isExpenseAlert: boolean;
     isBudgetAlert: boolean;
     isTipsAndArticles: boolean;
   };
+  contactSupport: mongoose.Types.ObjectId[];
 }
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
@@ -34,6 +36,10 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       type: String,
       required: true,
       trim: true,
+    },
+    isAdmin: {
+      type: Boolean,
+      default: false,
     },
     email: {
       type: String,
@@ -139,6 +145,12 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
         ],
       },
     },
+    contactSupport: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "ContactSupport",
+      },
+    ],
   },
   { timestamps: true }
 );

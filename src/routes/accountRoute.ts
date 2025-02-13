@@ -25,4 +25,5 @@ accountRouter.post(
   upload.single("file"),
   Account.updateUserDetails
 );
+
 accountRouter.delete("/deactivate-account", Account.deactiveAccount);

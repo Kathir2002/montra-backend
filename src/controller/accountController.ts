@@ -4,6 +4,7 @@ import User from "../model/userModel";
 import {
   cleanData,
   IPushNotificationPayload,
+  MailOptionsInterface,
   sendMail,
 } from "../lib/functions";
 import AccountModel from "../model/accountModel";
@@ -14,6 +15,7 @@ import DeviceTokenService from "./deviceTokenController";
 import { uploadToCloud } from "../lib/upload";
 import moment from "moment";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
+import ContactSupportModel from "../model/contactSupport";
 const ObjectId = mongoose.Types.ObjectId;
 
 class accountController {

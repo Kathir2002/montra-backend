@@ -1,9 +1,8 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import { config } from "dotenv";
 import { firebase } from "./src/firebase";
 import cloud from "cloudinary";
-import path from "path";
 
 firebase.messaging();
 config();
@@ -18,6 +17,8 @@ import "./src/helper/notificationScheduler";
 import "./src/helper/budgetNotificationScheduler";
 import "./src/helper/attachmentDeleteScheduler";
 import Transaction from "./src/controller/transactionControllers";
+import { contactSupportRouter } from "./src/routes/contactSupportRoute";
+
 const app = express();
 
 app.use(express.json());
@@ -39,7 +40,9 @@ app.use("/api/auth", authRouter);
 app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
 app.use("/api/budget", verifyToken, budgetRouter);
+app.use("/api/contact-support", verifyToken, contactSupportRouter);
 app.get("/download/:fileName", Transaction.downloadTransction);
+
 app.get("/", async (req, res) => {
   res.status(200).json({ message: "Server is running" });
 });

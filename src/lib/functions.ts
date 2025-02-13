@@ -18,10 +18,11 @@ export interface IPushNotificationPayload {
 
 export interface MailOptionsInterface {
   from?: string;
-  to: string;
+  to: string | string[];
   subject: string;
   html: string;
-  fileContent?: string;
+  fileContent?: string | Buffer<ArrayBufferLike>;
+  // fileContent?: Buffer<ArrayBufferLike>;
   fileName?: string;
   fileType?: string;
 }
@@ -55,7 +56,7 @@ export const encryptDetails = (data: string) => {
   }
 };
 
-export const sendMail = ({
+export const sendMail = async ({
   html,
   subject,
   to,
@@ -63,40 +64,44 @@ export const sendMail = ({
   fileName,
   fileType,
 }: MailOptionsInterface) => {
-  let mailTransporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    ignoreTLS: false,
-    secure: false,
-    auth: {
-      user: "montra.service@gmail.com",
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  const mailOptions: Mail.Options = {
-    from: "montra.service@gmail.com",
-    to: to,
-    subject: subject,
-    html: html,
-  };
-
-  if (fileContent && fileName && fileType) {
-    mailOptions["attachments"] = [
-      {
-        filename: fileName,
-        content: fileContent,
-        contentType: fileType,
+  return await new Promise(async (resolve, reject) => {
+    let mailTransporter = nodemailer.createTransport({
+      host: "smtp.gmail.com",
+      port: 587,
+      ignoreTLS: false,
+      secure: false,
+      auth: {
+        user: "montra.service@gmail.com",
+        pass: process.env.EMAIL_PASS,
       },
-    ];
-  }
+    });
 
-  mailTransporter.sendMail(mailOptions, (err) => {
-    if (err) {
-      console.log(err?.message);
-    } else {
-      console.log("Email has sent");
+    const mailOptions: Mail.Options = {
+      from: "montra.service@gmail.com",
+      to: to,
+      subject: subject,
+      html: html,
+    };
+
+    if (fileContent && fileName && fileType) {
+      mailOptions["attachments"] = [
+        {
+          filename: fileName,
+          content: fileContent,
+          contentType: fileType,
+        },
+      ];
     }
+
+    mailTransporter.sendMail(mailOptions, (err) => {
+      if (err) {
+        console.log(err?.message);
+        reject(err.message);
+      } else {
+        console.log("Email has sent");
+        resolve("Email has sent");
+      }
+    });
   });
 };
 

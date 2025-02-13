@@ -337,10 +337,16 @@ class auth {
         {
           _id: existingUser._id,
           email: existingUser.email,
+          role: existingUser?.isAdmin ? "Admin" : "User",
         },
         process.env.JWT_KEY as string
       );
       const ipAddress = req?.ip as string;
+
+      const activeRequestCount = (await User.find()).reduce(
+        (sum: number, acc) => sum + acc.contactSupport.length,
+        0
+      );
 
       const userData = {
         id: existingUser._id,
@@ -349,6 +355,12 @@ class auth {
         picture: existingUser.picture,
         isSetupDone: existingUser.isSetupDone,
         currency: existingUser.currency,
+        activeContactRequestCount: existingUser.isAdmin
+          ? activeRequestCount
+          : existingUser?.contactSupport?.length
+          ? existingUser?.contactSupport?.length
+          : 0,
+        isAdmin: existingUser.isAdmin,
       };
       const encryptedToken = encryptDetails(jwtToken);
       await DeviceTokenService.registerDeviceToken(existingUser._id, fcmToken, {
@@ -375,15 +387,19 @@ class auth {
   }
 
   async userDetails(req: AuthRequest, res: Response) {
-    const email = req._id;
+    const userId = req._id;
 
     try {
-      const user = await User.findById(email);
+      const user = await User.findById(userId);
       if (!user) {
         return res
           .status(404)
           .json({ message: "No user found", success: false });
       }
+      const activeRequestCount = (await User.find()).reduce(
+        (sum: number, acc) => sum + acc.contactSupport.length,
+        0
+      );
       const userData = {
         name: user?.name,
         id: user?._id,
@@ -393,6 +409,12 @@ class auth {
         currency: user.currency,
         securityMethod: user?.securityMethod,
         phoneNumber: user?.phoneNumber,
+        activeContactRequestCount: user?.isAdmin
+          ? activeRequestCount
+          : user?.contactSupport?.length
+          ? user?.contactSupport?.length
+          : 0,
+        isAdmin: user.isAdmin,
       };
       res.status(200).json({ user: userData, success: true });
     } catch (error) {
@@ -442,6 +464,7 @@ class auth {
               {
                 _id: newUser._id,
                 email: newUser.email,
+                role: newUser?.isAdmin ? "Admin" : "User",
               },
               process.env.JWT_KEY as string
             );
@@ -471,6 +494,10 @@ class auth {
               .status(200)
               .json({ user: newUser, token: encryptedToken, success: true });
           }
+          const activeRequestCount = (await User.find()).reduce(
+            (sum: number, acc) => sum + acc.contactSupport.length,
+            0
+          );
           const userData = {
             email: existingUser?.email,
             picture: existingUser?.picture,
@@ -480,9 +507,19 @@ class auth {
             currency: existingUser.currency,
             securityMethod: existingUser?.securityMethod,
             phoneNumber: existingUser?.phoneNumber,
+            isAdmin: existingUser.isAdmin,
+            activeContactRequestCount: existingUser?.isAdmin
+              ? activeRequestCount
+              : existingUser?.contactSupport?.length
+              ? existingUser?.contactSupport?.length
+              : 0,
           };
           const jwtToken = jwt.sign(
-            { _id: existingUser._id, email: existingUser.email },
+            {
+              _id: existingUser._id,
+              email: existingUser.email,
+              role: existingUser?.isAdmin ? "Admin" : "User",
+            },
             process.env.JWT_KEY as string
           );
 
@@ -520,6 +557,11 @@ class auth {
               name: existingUser?.name,
               device: `${manufacturer} (${deviceModel})`,
               _id: existingUser?._id,
+              activeContactRequestCount: existingUser?.isAdmin
+                ? activeRequestCount
+                : existingUser?.contactSupport?.length
+                ? existingUser?.contactSupport?.length
+                : 0,
             };
             await accountReactivateMailSender(userData);
           }
@@ -561,6 +603,7 @@ class auth {
         {
           _id: user._id,
           email: user.email,
+          role: user?.isAdmin ? "Admin" : "User",
         },
         process.env.JWT_KEY as string,
         { expiresIn: "1h" }
