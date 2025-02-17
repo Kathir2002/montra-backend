@@ -18,7 +18,7 @@ interface Message {
   timestamp: Date;
   replyTo?: IReply;
   senderId: mongoose.Types.ObjectId;
-  isRead: boolean;
+  status?: "sent" | "delivered" | "read";
 }
 
 class contactSupportController {
@@ -390,11 +390,14 @@ class contactSupportController {
             ? replyMap.get(reply.replyTo.toString())
             : null, // Attach referenced reply
           senderId: reply.sender,
-          isRead: reply?.isRead,
+          status: reply?.status,
         };
       });
 
-      return res.status(200).json({ success: true, chats: chats });
+      return res.status(200).json({
+        success: true,
+        chats: chats.reverse(),
+      });
     } catch (err: any) {
       console.log(err?.message);
       res.status(500).json({ success: false, message: err?.message });
@@ -433,7 +436,7 @@ class contactSupportController {
         sender: userId,
         role: user?.isAdmin ? "Admin" : "User",
         text: message,
-        isRead: false,
+        status: "sent",
         createdAt: new Date(),
         replyTo: replyToId,
         senderName: user?.name,
@@ -457,7 +460,7 @@ class contactSupportController {
         ])
       );
 
-      rest?.replies?.map(async (reply: IReply) => {
+      rest?.replies?.map((reply: IReply) => {
         chats.push({
           id: reply?._id!,
           text: reply.text,
@@ -466,7 +469,7 @@ class contactSupportController {
           replyTo: reply.replyTo
             ? replyMap.get(reply.replyTo.toString())
             : null, // Attach referenced reply
-          isRead: reply?.isRead,
+          status: reply?.status,
         });
       });
 
@@ -504,7 +507,7 @@ class contactSupportController {
       res.status(200).json({
         success: true,
         message: "Reply added successfully",
-        chats: chats,
+        chats: chats.reverse(),
       });
     } catch (error: any) {
       console.log(error?.message);

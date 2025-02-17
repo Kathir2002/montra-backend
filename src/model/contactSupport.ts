@@ -29,7 +29,7 @@ export interface IReply {
   sender: mongoose.Types.ObjectId;
   role: "Admin" | "User";
   text: string;
-  isRead: boolean;
+  status?: "sent" | "delivered" | "read";
   createdAt: Date;
   _id?: mongoose.Types.ObjectId;
   replyTo?: any;
@@ -146,10 +146,6 @@ const contactSupportSchema = new mongoose.Schema<IContactSupportSchema>(
           type: String,
           required: true,
         },
-        isRead: {
-          type: Boolean,
-          default: false,
-        },
         createdAt: {
           type: Date,
           default: Date.now,
@@ -158,6 +154,11 @@ const contactSupportSchema = new mongoose.Schema<IContactSupportSchema>(
           type: mongoose.Schema.Types.ObjectId,
           ref: "ContactSupport.replies",
           default: null,
+        },
+        status: {
+          type: String,
+          default: "sent",
+          required: true,
         },
       },
     ],

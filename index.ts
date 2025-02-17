@@ -18,6 +18,8 @@ import "./src/helper/budgetNotificationScheduler";
 import "./src/helper/attachmentDeleteScheduler";
 import Transaction from "./src/controller/transactionControllers";
 import { contactSupportRouter } from "./src/routes/contactSupportRoute";
+import { createServer } from "http";
+import { initializeSocket } from "./src/helper/socket";
 
 const app = express();
 
@@ -35,6 +37,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
   secure: true,
 });
+
+const httpServer = createServer(app);
+const io = initializeSocket(httpServer);
+
+io.listen(3000);
 
 app.use("/api/auth", authRouter);
 app.use("/api/account", verifyToken, accountRouter);
