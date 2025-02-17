@@ -11,6 +11,8 @@ import {
 import mongoose from "mongoose";
 import DeviceTokenService from "./deviceTokenController";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
+import { io } from "../helper/socket";
+import { text } from "body-parser";
 
 interface Message {
   id: mongoose.Types.ObjectId;
@@ -60,6 +62,7 @@ class contactSupportController {
         userImage: user?.picture,
         request_Date: new Date(),
       });
+
       user.contactSupport.push(contactSupportData._id);
 
       await user.save();
@@ -490,12 +493,30 @@ class contactSupportController {
       const adminUsers = await User.find({ isAdmin: true });
       adminUsers.map(async (adminUser) => {
         if (adminUser?._id !== user?._id) {
+          io.to(String(request_id)).emit("message:receive", {
+            id: chat?.doc?._id!,
+            text: newReply.text,
+            timestamp: newReply?.createdAt,
+            senderId: newReply?.sender,
+            replyTo: replyTo ? replyTo : null, // Attach referenced reply
+            status: "sent",
+            type: "message",
+          });
           await DeviceTokenService.notifyAllDevices(
             adminUser?._id,
             data,
             androidConfig
           );
         } else {
+          io.to(String(request_id)).emit("message:receive", {
+            id: chat?.doc?._id!,
+            text: newReply.text,
+            timestamp: newReply?.createdAt,
+            senderId: newReply?.sender,
+            replyTo: replyTo ? replyTo : null, // Attach referenced reply
+            status: "sent",
+            type: "message",
+          });
           await DeviceTokenService.notifyAllDevices(
             user?._id,
             data,
