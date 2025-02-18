@@ -1,5 +1,7 @@
 import { Server as HTTPServer } from "http";
 import { Server } from "socket.io";
+import ContactSupport from "../controller/contactSupportController";
+import { Response } from "express";
 export let io: Server;
 
 export const initializeSocket = (httpServer: HTTPServer) => {
@@ -30,6 +32,20 @@ export const initializeSocket = (httpServer: HTTPServer) => {
           userId,
           isTyping,
         });
+      });
+
+      socket.on("message:send", async (message) => {
+        console.log(message, "======");
+        const req = {
+          body: message,
+        };
+
+        const res = {
+          status: (code: number) => ({
+            json: () => console.log(`Response Code: ${code}`),
+          }),
+        };
+        await ContactSupport.addReply(req, res as Response);
       });
 
       socket.on("disconnect", async () => {

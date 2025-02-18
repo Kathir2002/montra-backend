@@ -406,7 +406,7 @@ class contactSupportController {
       res.status(500).json({ success: false, message: err?.message });
     }
   }
-  async addReply(req: any, res: Response, next: NextFunction) {
+  async addReply(req: any, res: Response) {
     try {
       const userId = req?._id;
       const { message, request_id, replyTo } = req.body;
@@ -434,6 +434,7 @@ class contactSupportController {
           return res.status(400).json({ message: "Invalid replyTo ID" });
         }
       }
+      const adminUsers = await User.find({ isAdmin: true });
 
       const newReply: IReply = {
         sender: userId,
@@ -463,6 +464,30 @@ class contactSupportController {
         ])
       );
 
+      adminUsers.map(async (adminUser) => {
+        if (adminUser?._id !== user?._id) {
+          io.to(String(adminUser?._id)).emit("message:receive", {
+            id: chat?.doc?._id!,
+            text: newReply.text,
+            timestamp: newReply?.createdAt,
+            senderId: newReply?.sender,
+            replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
+            status: "sent",
+            type: "message",
+          });
+        } else {
+          io.to(String(user?._id)).emit("message:receive", {
+            id: chat?.doc?._id!,
+            text: newReply.text,
+            timestamp: newReply?.createdAt,
+            senderId: newReply?.sender,
+            replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
+            status: "sent",
+            type: "message",
+          });
+        }
+      });
+
       rest?.replies?.map((reply: IReply) => {
         chats.push({
           id: reply?._id!,
@@ -490,33 +515,14 @@ class contactSupportController {
         },
       };
 
-      const adminUsers = await User.find({ isAdmin: true });
       adminUsers.map(async (adminUser) => {
         if (adminUser?._id !== user?._id) {
-          io.to(String(request_id)).emit("message:receive", {
-            id: chat?.doc?._id!,
-            text: newReply.text,
-            timestamp: newReply?.createdAt,
-            senderId: newReply?.sender,
-            replyTo: replyTo ? replyTo : null, // Attach referenced reply
-            status: "sent",
-            type: "message",
-          });
           await DeviceTokenService.notifyAllDevices(
             adminUser?._id,
             data,
             androidConfig
           );
         } else {
-          io.to(String(request_id)).emit("message:receive", {
-            id: chat?.doc?._id!,
-            text: newReply.text,
-            timestamp: newReply?.createdAt,
-            senderId: newReply?.sender,
-            replyTo: replyTo ? replyTo : null, // Attach referenced reply
-            status: "sent",
-            type: "message",
-          });
           await DeviceTokenService.notifyAllDevices(
             user?._id,
             data,
