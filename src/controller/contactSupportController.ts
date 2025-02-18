@@ -12,7 +12,6 @@ import mongoose from "mongoose";
 import DeviceTokenService from "./deviceTokenController";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import { io } from "../helper/socket";
-import { text } from "body-parser";
 
 interface Message {
   id: mongoose.Types.ObjectId;
@@ -409,6 +408,7 @@ class contactSupportController {
   async addReply(req: any, res: Response) {
     try {
       const userId = req?._id;
+
       const { message, request_id, replyTo } = req.body;
 
       const user = await User.findById(userId);
@@ -464,10 +464,22 @@ class contactSupportController {
         ])
       );
 
-      adminUsers.map(async (adminUser) => {
-        if (adminUser?._id !== user?._id) {
-          io.to(String(adminUser?._id)).emit("message:receive", {
-            id: chat?.doc?._id!,
+      await Promise.all(
+        adminUsers.map(async (adminUser) => {
+          const recipientId =
+            String(adminUser?._id) !== String(user?._id)
+              ? adminUser?._id
+              : chat?.user;
+          console.log(
+            String(adminUser?._id) !== String(user?._id),
+            adminUser?._id,
+            user?._id,
+            recipientId,
+            "======================="
+          );
+
+          io.to(String(recipientId)).emit("message:receive", {
+            id: chat?.doc?._id ?? chat?._id!,
             text: newReply.text,
             timestamp: newReply?.createdAt,
             senderId: newReply?.sender,
@@ -475,18 +487,8 @@ class contactSupportController {
             status: "sent",
             type: "message",
           });
-        } else {
-          io.to(String(user?._id)).emit("message:receive", {
-            id: chat?.doc?._id!,
-            text: newReply.text,
-            timestamp: newReply?.createdAt,
-            senderId: newReply?.sender,
-            replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
-            status: "sent",
-            type: "message",
-          });
-        }
-      });
+        })
+      );
 
       rest?.replies?.map((reply: IReply) => {
         chats.push({
@@ -524,7 +526,7 @@ class contactSupportController {
           );
         } else {
           await DeviceTokenService.notifyAllDevices(
-            user?._id,
+            chat?.user,
             data,
             androidConfig
           );

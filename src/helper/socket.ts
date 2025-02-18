@@ -35,14 +35,15 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       });
 
       socket.on("message:send", async (message) => {
-        console.log(message, "======");
         const req = {
           body: message,
+          _id: message?.senderId,
         };
 
         const res = {
           status: (code: number) => ({
-            json: () => console.log(`Response Code: ${code}`),
+            json: (data: { success: boolean; message: string }) =>
+              console.log(data.message),
           }),
         };
         await ContactSupport.addReply(req, res as Response);
