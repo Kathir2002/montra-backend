@@ -48,6 +48,34 @@ export const initializeSocket = (httpServer: HTTPServer) => {
         };
         await ContactSupport.addReply(req, res as Response);
       });
+      socket.on("message:status", async (message) => {
+        const req = {
+          body: message,
+          _id: message?.senderId,
+        };
+
+        const res = {
+          status: (code: number) => ({
+            json: (data: { success: boolean; message: string }) =>
+              console.log(data.message),
+          }),
+        };
+        await ContactSupport.addReply(req, res as Response);
+      });
+      socket.on("message:status", async (message) => {
+        const req = {
+          body: message,
+          _id: message?.senderId,
+        };
+
+        const res = {
+          status: (code: number) => ({
+            json: (data: { success: boolean; message: string }) =>
+              console.log(data.message),
+          }),
+        };
+        await ContactSupport.addReply(req, res as Response);
+      });
 
       socket.on("disconnect", async () => {
         // Broadcast user offline status

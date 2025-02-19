@@ -19,7 +19,7 @@ interface Message {
   timestamp: Date;
   replyTo?: IReply;
   senderId: mongoose.Types.ObjectId;
-  status?: "sent" | "delivered" | "read";
+  status?: "sent" | "read";
 }
 
 class contactSupportController {
@@ -450,7 +450,6 @@ class contactSupportController {
       const chat: any = await supportRequest.save();
       const { updatedAt, __v, createdAt, ...rest } = chat?._doc;
 
-      const chats: Message[] = [];
       const replyToData = await ContactSupportModel.findOne(
         { _id: request_id },
         { replies: 1 } // Fetch only the `replies` field
@@ -463,45 +462,6 @@ class contactSupportController {
           reply,
         ])
       );
-
-      await Promise.all(
-        adminUsers.map(async (adminUser) => {
-          const recipientId =
-            String(adminUser?._id) !== String(user?._id)
-              ? adminUser?._id
-              : chat?.user;
-          console.log(
-            String(adminUser?._id) !== String(user?._id),
-            adminUser?._id,
-            user?._id,
-            recipientId,
-            "======================="
-          );
-
-          io.to(String(recipientId)).emit("message:receive", {
-            id: chat?.doc?._id ?? chat?._id!,
-            text: newReply.text,
-            timestamp: newReply?.createdAt,
-            senderId: newReply?.sender,
-            replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
-            status: "sent",
-            type: "message",
-          });
-        })
-      );
-
-      rest?.replies?.map((reply: IReply) => {
-        chats.push({
-          id: reply?._id!,
-          text: reply.text,
-          timestamp: reply?.createdAt,
-          senderId: reply?.sender,
-          replyTo: reply.replyTo
-            ? replyMap.get(reply.replyTo.toString())
-            : null, // Attach referenced reply
-          status: reply?.status,
-        });
-      });
 
       const data: IPushNotificationPayload = {
         title: `🚀 Received new message from ${user?.name}`,
@@ -517,26 +477,33 @@ class contactSupportController {
         },
       };
 
-      adminUsers.map(async (adminUser) => {
-        if (adminUser?._id !== user?._id) {
+      await Promise.all(
+        adminUsers.map(async (adminUser) => {
+          const recipientId =
+            String(adminUser?._id) !== String(user?._id)
+              ? adminUser?._id
+              : chat?.user;
+
           await DeviceTokenService.notifyAllDevices(
-            adminUser?._id,
+            recipientId,
             data,
             androidConfig
           );
-        } else {
-          await DeviceTokenService.notifyAllDevices(
-            chat?.user,
-            data,
-            androidConfig
-          );
-        }
-      });
+          io.to(String(recipientId)).emit("message:receive", {
+            id: chat?.doc?._id ?? chat?._id!,
+            text: newReply.text,
+            timestamp: newReply?.createdAt,
+            senderId: newReply?.sender,
+            replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
+            status: "sent",
+            type: "message",
+          });
+        })
+      );
 
       res.status(200).json({
         success: true,
         message: "Reply added successfully",
-        chats: chats.reverse(),
       });
     } catch (error: any) {
       console.log(error?.message);
@@ -547,6 +514,45 @@ class contactSupportController {
         error: error.message,
       });
     }
+  }
+  async updateMessageStatus(req: AuthRequest, res: Response) {
+    const userId = req?._id;
+
+    const { request_id, messageIds } = req.body;
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const supportRequest = await ContactSupportModel.findById(request_id);
+    if (!supportRequest) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Support request not found" });
+    }
+    const adminUsers = await User.find({ isAdmin: true });
+    await Promise.all(
+      messageIds?.map(async (messageId: string) => {
+        supportRequest.replies.find((reply) => {
+          if (String(reply._id) === messageId) {
+            reply.status = "read";
+          }
+        });
+        await supportRequest.save();
+        await Promise.all(
+          adminUsers.map(async (adminUser) => {
+            const recipientId =
+              String(adminUser?._id) !== String(user?._id)
+                ? adminUser?._id
+                : supportRequest?.user;
+            io.to(String(recipientId)).emit("message:status", { hai: "Hello" });
+          })
+        );
+      })
+    );
   }
 }
 

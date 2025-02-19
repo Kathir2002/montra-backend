@@ -29,7 +29,7 @@ export interface IReply {
   sender: mongoose.Types.ObjectId;
   role: "Admin" | "User";
   text: string;
-  status?: "sent" | "delivered" | "read";
+  status?: "sent" | "read";
   createdAt: Date;
   _id?: mongoose.Types.ObjectId;
   replyTo?: any;
