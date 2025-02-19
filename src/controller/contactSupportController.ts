@@ -463,6 +463,16 @@ class contactSupportController {
         ])
       );
 
+      io.to(String(request_id)).emit("message:receive", {
+        id: chat?.doc?._id ?? chat?._id!,
+        text: newReply.text,
+        timestamp: newReply?.createdAt,
+        senderId: newReply?.sender,
+        replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
+        status: "sent",
+        type: "message",
+      });
+
       const data: IPushNotificationPayload = {
         title: `🚀 Received new message from ${user?.name}`,
         body: message,
@@ -489,15 +499,6 @@ class contactSupportController {
             data,
             androidConfig
           );
-          io.to(String(recipientId)).emit("message:receive", {
-            id: chat?.doc?._id ?? chat?._id!,
-            text: newReply.text,
-            timestamp: newReply?.createdAt,
-            senderId: newReply?.sender,
-            replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
-            status: "sent",
-            type: "message",
-          });
         })
       );
 
@@ -516,43 +517,110 @@ class contactSupportController {
     }
   }
   async updateMessageStatus(req: AuthRequest, res: Response) {
-    const userId = req?._id;
+    try {
+      const userId = req?._id;
 
-    const { request_id, messageIds } = req.body;
+      const { request_id, messageIds } = req.body;
 
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ success: false, message: "User not found" });
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      const supportRequest = await ContactSupportModel.findById(request_id);
+      if (!supportRequest) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Support request not found" });
+      }
+      await Promise.all(
+        messageIds?.map(async (messageId: string) => {
+          supportRequest.replies.find((reply) => {
+            if (String(reply._id) === messageId) {
+              reply.status = "read";
+            }
+          });
+          await supportRequest.save();
+          io.to(String(request_id)).emit("message:status", {
+            hai: "Hello",
+          });
+        })
+      );
+    } catch (err: any) {
+      console.log(err?.message);
+
+      return res.status(500).json({
+        success: false,
+        message: "Error updating message status",
+      });
     }
+  }
+  async deleteMessage(req: AuthRequest, res: Response) {
+    try {
+      const userId = req?._id;
+      const { request_id, messageId } = req.body;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      const supportRequest = await ContactSupportModel.findById(request_id);
+      if (!supportRequest) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Support request not found" });
+      }
+      supportRequest?.replies.map((reply) => {
+        if (String(reply._id) === messageId) {
+          supportRequest.replies.splice(
+            supportRequest.replies.indexOf(reply),
+            1
+          );
+        }
+      });
 
-    const supportRequest = await ContactSupportModel.findById(request_id);
-    if (!supportRequest) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Support request not found" });
+      await supportRequest.save();
+      io.to(String(request_id)).emit("message:deleteStatus", {
+        messageId,
+        success: true,
+      });
+    } catch (err: any) {
+      console.log(err?.message);
+      return res.status(500).json({
+        success: false,
+        message: "Error deleting message",
+      });
     }
-    const adminUsers = await User.find({ isAdmin: true });
-    await Promise.all(
-      messageIds?.map(async (messageId: string) => {
-        supportRequest.replies.find((reply) => {
-          if (String(reply._id) === messageId) {
-            reply.status = "read";
-          }
-        });
-        await supportRequest.save();
-        await Promise.all(
-          adminUsers.map(async (adminUser) => {
-            const recipientId =
-              String(adminUser?._id) !== String(user?._id)
-                ? adminUser?._id
-                : supportRequest?.user;
-            io.to(String(recipientId)).emit("message:status", { hai: "Hello" });
-          })
-        );
-      })
-    );
+  }
+  async editReply(req: AuthRequest, res: Response) {
+    try {
+      const userId = req?._id;
+      const { request_id, messageId, newReplyText } = req.body;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      const updatedSupportRequest = await ContactSupportModel.findOneAndUpdate(
+        { request_id, "replies._id": new mongoose.Types.ObjectId(messageId) }, // Match the document & specific reply
+        { $set: { "replies.$.text": newReplyText } }, // Update the text field in the matched reply
+        { new: true } // Return the updated document
+      );
+
+      if (!updatedSupportRequest) {
+        return { success: false, message: "Request or message not found" };
+      }
+
+      return { success: true, data: updatedSupportRequest };
+    } catch (error) {
+      console.error("Error updating reply:", error);
+      return { success: false, message: "Something went wrong" };
+    }
   }
 }
 

@@ -2,6 +2,7 @@ import { Server as HTTPServer } from "http";
 import { Server } from "socket.io";
 import ContactSupport from "../controller/contactSupportController";
 import { Response } from "express";
+import { AuthRequest } from "../middleware/verifyToken";
 export let io: Server;
 
 export const initializeSocket = (httpServer: HTTPServer) => {
@@ -74,7 +75,26 @@ export const initializeSocket = (httpServer: HTTPServer) => {
               console.log(data.message),
           }),
         };
-        await ContactSupport.addReply(req, res as Response);
+        await ContactSupport.updateMessageStatus(
+          req as AuthRequest,
+          res as Response
+        );
+      });
+      socket.on("message:delete", async (message) => {
+        const req = {
+          body: message,
+          _id: message?.senderId,
+        };
+
+        const res = {
+          status: (code: number) => ({
+            json: (data: { success: boolean; message: string }) =>
+              console.log(data.message),
+          }),
+        };
+        console.log(req);
+
+        await ContactSupport.deleteMessage(req as AuthRequest, res as Response);
       });
 
       socket.on("disconnect", async () => {

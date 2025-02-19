@@ -34,7 +34,6 @@ export interface IReply {
   _id?: mongoose.Types.ObjectId;
   replyTo?: any;
   senderName: string;
-  // replyTo?: mongoose.Types.ObjectId | null;
 }
 
 const contactSupportSchema = new mongoose.Schema<IContactSupportSchema>(
