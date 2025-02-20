@@ -92,7 +92,6 @@ export const initializeSocket = (httpServer: HTTPServer) => {
               console.log(data.message),
           }),
         };
-        console.log(req);
 
         await ContactSupport.deleteMessage(req as AuthRequest, res as Response);
       });

@@ -2,7 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import { AuthRequest } from "../middleware/verifyToken";
 import User from "../model/userModel";
 import { uploadToCloud } from "../lib/upload";
-import ContactSupportModel, { IReply } from "../model/contactSupport";
+import ContactSupportModel, {
+  IContactSupportSchema,
+  IReply,
+} from "../model/contactSupport";
 import {
   IPushNotificationPayload,
   MailOptionsInterface,
@@ -69,7 +72,7 @@ class contactSupportController {
       const users = await User.find({ isAdmin: true });
       const toEmailIDS: string[] = [];
       users.map((user) => toEmailIDS.push(user.email));
-      const dashboard = `${process.env.DEEPLINK_URL}/dashboard`;
+      const dashboard = `${process.env.DEEPLINK_URL}/help-support-details/${request_id}`;
       const mailTemplateStyle = `body {
                 font-family: Arial, sans-serif;
                 line-height: 1.6;
@@ -408,7 +411,6 @@ class contactSupportController {
   async addReply(req: any, res: Response) {
     try {
       const userId = req?._id;
-
       const { message, request_id, replyTo } = req.body;
 
       const user = await User.findById(userId);
@@ -448,7 +450,6 @@ class contactSupportController {
 
       supportRequest.replies.push(newReply);
       const chat: any = await supportRequest.save();
-      const { updatedAt, __v, createdAt, ...rest } = chat?._doc;
 
       const replyToData = await ContactSupportModel.findOne(
         { _id: request_id },
@@ -468,7 +469,7 @@ class contactSupportController {
         text: newReply.text,
         timestamp: newReply?.createdAt,
         senderId: newReply?.sender,
-        replyTo: replyTo ? replyMap.get(replyTo.toString()) : null, // Attach referenced reply
+        replyTo: replyTo ? replyMap.get(replyTo?.id.toString()) : null, // Attach referenced reply
         status: "sent",
         type: "message",
       });
@@ -478,7 +479,7 @@ class contactSupportController {
         body: message,
         data: {
           screen: "ChatView",
-          id: request_id,
+          params: request_id,
         },
       };
       const androidConfig: AndroidConfig = {
@@ -620,6 +621,70 @@ class contactSupportController {
     } catch (error) {
       console.error("Error updating reply:", error);
       return { success: false, message: "Something went wrong" };
+    }
+  }
+  async updateRequestStatus(req: AuthRequest, res: Response) {
+    try {
+      const userId = req?._id;
+      const { request_id, status, priority } = req.body;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+      const toBeUpdated: {
+        status?: IContactSupportSchema["status"];
+        priority?: IContactSupportSchema["priority"];
+      } = {};
+      if (status) {
+        toBeUpdated["status"] = status;
+      }
+      if (priority) {
+        toBeUpdated["priority"] = priority;
+      }
+      const updatedSupportRequest = await ContactSupportModel.findByIdAndUpdate(
+        request_id,
+        { $set: toBeUpdated },
+        { new: true }
+      );
+      if (!updatedSupportRequest) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Request not found" });
+      }
+      if (status) {
+        const data: IPushNotificationPayload = {
+          title: "Support Request Status Updated",
+          body: "Your support request status has been updated. Tap to check the latest details.",
+          data: {
+            screen: "HelpRequest_Details",
+            params: request_id,
+          },
+        };
+        const androidConfig: AndroidConfig = {
+          notification: {
+            channelId: "help-center",
+          },
+        };
+        await DeviceTokenService.notifyAllDevices(
+          updatedSupportRequest?.user,
+          data,
+          androidConfig
+        );
+      }
+      return res.json({
+        success: true,
+        message: `Request ${
+          status ? "status" : "priority"
+        } updated successfully`,
+      });
+    } catch (error) {
+      console.error("Error updating request status:", error);
+      return res
+        .status(500)
+        .json({ success: false, message: "Something went wrong" });
     }
   }
 }

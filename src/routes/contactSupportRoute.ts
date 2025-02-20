@@ -20,3 +20,7 @@ contactSupportRouter.get(
 );
 contactSupportRouter.get("/chat", ContactSupport.getContactChat);
 contactSupportRouter.post("/add-reply", ContactSupport.addReply);
+contactSupportRouter.post(
+  "/update-request-status",
+  ContactSupport.updateRequestStatus
+);

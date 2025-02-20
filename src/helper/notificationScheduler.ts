@@ -114,9 +114,7 @@ body {
   const data: IPushNotificationPayload = {
     title: "Goodbye from Montra 👋",
     body: "Account deletion complete. We hope to see you again in the future!",
-    data: {
-      screen: "",
-    },
+    data: {},
   };
   const androidConfig: AndroidConfig = {
     notification: {

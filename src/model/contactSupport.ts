@@ -23,7 +23,6 @@ export interface IContactSupportSchema {
   priority: "Low" | "Medium" | "High";
   replies: IReply[];
 }
-[];
 
 export interface IReply {
   sender: mongoose.Types.ObjectId;
