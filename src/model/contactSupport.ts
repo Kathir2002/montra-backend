@@ -28,11 +28,13 @@ export interface IReply {
   sender: mongoose.Types.ObjectId;
   role: "Admin" | "User";
   text: string;
-  status?: "sent" | "read";
+  isRead: boolean;
   createdAt: Date;
+  updatedAt?: Date;
   _id?: mongoose.Types.ObjectId;
   replyTo?: any;
   senderName: string;
+  isEdited: boolean;
 }
 
 const contactSupportSchema = new mongoose.Schema<IContactSupportSchema>(
@@ -153,10 +155,14 @@ const contactSupportSchema = new mongoose.Schema<IContactSupportSchema>(
           ref: "ContactSupport.replies",
           default: null,
         },
-        status: {
+        isRead: {
           type: String,
-          default: "sent",
+          default: false,
           required: true,
+        },
+        isEdited: {
+          type: Boolean,
+          default: false,
         },
       },
     ],

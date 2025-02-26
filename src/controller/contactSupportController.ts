@@ -16,15 +16,6 @@ import DeviceTokenService from "./deviceTokenController";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import { io } from "../helper/socket";
 
-interface Message {
-  id: mongoose.Types.ObjectId;
-  text: string;
-  timestamp: Date;
-  replyTo?: IReply;
-  senderId: mongoose.Types.ObjectId;
-  status?: "sent" | "read";
-}
-
 class contactSupportController {
   async addContactSupport(req: AuthRequest, res: Response) {
     try {
@@ -395,7 +386,8 @@ class contactSupportController {
             ? replyMap.get(reply.replyTo.toString())
             : null, // Attach referenced reply
           senderId: reply.sender,
-          status: reply?.status,
+          isRead: reply?.isRead,
+          isEdited: reply?.isEdited,
         };
       });
 
@@ -408,7 +400,7 @@ class contactSupportController {
       res.status(500).json({ success: false, message: err?.message });
     }
   }
-  async addReply(req: any, res: Response) {
+  async addReply(req: AuthRequest, res: Response) {
     try {
       const userId = req?._id;
       const { message, request_id, replyTo } = req.body;
@@ -439,13 +431,14 @@ class contactSupportController {
       const adminUsers = await User.find({ isAdmin: true });
 
       const newReply: IReply = {
-        sender: userId,
+        sender: userId!,
         role: user?.isAdmin ? "Admin" : "User",
         text: message,
-        status: "sent",
+        isRead: false,
         createdAt: new Date(),
         replyTo: replyToId,
         senderName: user?.name,
+        isEdited: false,
       };
 
       supportRequest.replies.push(newReply);
@@ -470,8 +463,8 @@ class contactSupportController {
         timestamp: newReply?.createdAt,
         senderId: newReply?.sender,
         replyTo: replyTo ? replyMap.get(replyTo?.id.toString()) : null, // Attach referenced reply
-        status: "sent",
         type: "message",
+        isEdited: newReply?.isEdited,
       });
 
       const data: IPushNotificationPayload = {
@@ -536,19 +529,24 @@ class contactSupportController {
           .status(404)
           .json({ success: false, message: "Support request not found" });
       }
+      const readMessageIds: string[] = [];
       await Promise.all(
         messageIds?.map(async (messageId: string) => {
-          supportRequest.replies.find((reply) => {
-            if (String(reply._id) === messageId) {
-              reply.status = "read";
-            }
-          });
-          await supportRequest.save();
-          io.to(String(request_id)).emit("message:status", {
-            hai: "Hello",
-          });
+          const reply = supportRequest.replies.find(
+            (reply) => String(reply._id) === messageId
+          );
+          if (reply) {
+            reply.isRead = true;
+            readMessageIds.push(messageId);
+          }
         })
       );
+
+      await supportRequest.save();
+
+      console.log(readMessageIds);
+
+      io.to(String(request_id)).emit("message:read-status", readMessageIds);
     } catch (err: any) {
       console.log(err?.message);
 
@@ -599,30 +597,64 @@ class contactSupportController {
   async editReply(req: AuthRequest, res: Response) {
     try {
       const userId = req?._id;
-      const { request_id, messageId, newReplyText } = req.body;
+      const { request_id, messageId, message } = req.body;
+
       const user = await User.findById(userId);
       if (!user) {
         return res
           .status(404)
           .json({ success: false, message: "User not found" });
       }
-
-      const updatedSupportRequest = await ContactSupportModel.findOneAndUpdate(
-        { request_id, "replies._id": new mongoose.Types.ObjectId(messageId) }, // Match the document & specific reply
-        { $set: { "replies.$.text": newReplyText } }, // Update the text field in the matched reply
-        { new: true } // Return the updated document
-      );
-
-      if (!updatedSupportRequest) {
-        return { success: false, message: "Request or message not found" };
+      const requestData = await ContactSupportModel.findById(request_id);
+      if (!requestData) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Request not found" });
       }
+      const reply = requestData.replies.find((reply) =>
+        reply._id!.equals(messageId)
+      );
+      if (!reply) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Reply not found" });
+      }
+      reply.text = message;
+      reply.updatedAt = new Date();
+      reply.isEdited = true;
+      await requestData.save();
+      // Find the updated reply from the updated document
+      const updatedReply = requestData.replies.find(
+        (reply) => String(reply._id) === String(messageId)
+      );
+      if (!updatedReply) {
+        return res
+          .status(404)
+          .json({ success: false, message: "Reply not found" });
+      }
+      // Emit real-time update to all users in the request chat room
+      io.to(String(request_id)).emit("message:update", {
+        id: updatedReply._id,
+        text: updatedReply.text,
+        timestamp: updatedReply.updatedAt,
+        senderId: updatedReply.sender,
+        isEdited: updatedReply?.isEdited,
+        type: "message",
+      });
 
-      return { success: true, data: updatedSupportRequest };
+      return res.json({
+        success: true,
+        message: "Reply updated successfully",
+      });
     } catch (error) {
       console.error("Error updating reply:", error);
-      return { success: false, message: "Something went wrong" };
+      return res.status(500).json({
+        success: false,
+        message: "Something went wrong",
+      });
     }
   }
+
   async updateRequestStatus(req: AuthRequest, res: Response) {
     try {
       const userId = req?._id;
