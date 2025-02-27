@@ -3,6 +3,7 @@ import cors from "cors";
 import { config } from "dotenv";
 import { firebase } from "./src/firebase";
 import cloud from "cloudinary";
+import morgan from "morgan";
 
 firebase.messaging();
 config();
@@ -42,7 +43,7 @@ const httpServer = createServer(app);
 const io = initializeSocket(httpServer);
 
 io.listen(3000);
-
+app.use(morgan("dev"));
 app.use("/api/auth", authRouter);
 app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
