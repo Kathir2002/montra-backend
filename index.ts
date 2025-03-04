@@ -29,8 +29,6 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cors({ origin: "*" }));
 
-const port = process.env.PORT || 8000;
-
 const cloudinary = cloud.v2;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
@@ -42,7 +40,7 @@ cloudinary.config({
 const httpServer = createServer(app);
 const io = initializeSocket(httpServer);
 
-io.listen(3000);
+// io.listen(port as number);
 app.use(morgan("dev"));
 app.use("/api/auth", authRouter);
 app.use("/api/account", verifyToken, accountRouter);
@@ -61,8 +59,5 @@ app.use("*", (req, res) => {
 });
 
 connectMongoDB();
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
-});
 
 export default app;

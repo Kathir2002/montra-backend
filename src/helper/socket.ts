@@ -96,6 +96,10 @@ export const initializeSocket = (httpServer: HTTPServer) => {
       });
     }
   });
+  const port = process.env.PORT || 8000;
 
+  httpServer.listen(port, () => {
+    console.log(`Server is running on port ${port}`);
+  });
   return io;
 };
