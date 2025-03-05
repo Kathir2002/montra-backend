@@ -156,7 +156,7 @@ const contactSupportSchema = new mongoose.Schema<IContactSupportSchema>(
           default: null,
         },
         isRead: {
-          type: String,
+          type: Boolean,
           default: false,
           required: true,
         },

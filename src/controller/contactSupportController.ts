@@ -543,9 +543,6 @@ class contactSupportController {
       );
 
       await supportRequest.save();
-
-      console.log(readMessageIds);
-
       io.to(String(request_id)).emit("message:read-status", readMessageIds);
     } catch (err: any) {
       console.log(err?.message);
