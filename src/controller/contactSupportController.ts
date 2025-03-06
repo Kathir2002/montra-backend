@@ -458,7 +458,7 @@ class contactSupportController {
       );
 
       io.to(String(request_id)).emit("message:receive", {
-        id: chat?.doc?._id ?? chat?._id!,
+        id: chat.replies[chat.replies.length - 1]?._id,
         text: newReply.text,
         timestamp: newReply?.createdAt,
         senderId: newReply?.sender,
@@ -569,16 +569,12 @@ class contactSupportController {
           .status(404)
           .json({ success: false, message: "Support request not found" });
       }
-      supportRequest?.replies.map((reply) => {
-        if (String(reply._id) === messageId) {
-          supportRequest.replies.splice(
-            supportRequest.replies.indexOf(reply),
-            1
-          );
-        }
-      });
+      supportRequest.replies = supportRequest.replies.filter(
+        (reply) => String(reply._id) !== String(messageId)
+      );
 
       await supportRequest.save();
+
       io.to(String(request_id)).emit("message:deleteStatus", {
         messageId,
         success: true,

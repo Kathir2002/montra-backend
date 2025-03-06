@@ -27,7 +27,6 @@ import DeviceTokenService from "./deviceTokenController";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import { SecureFileHandler } from "../lib/fileDownloadHelper";
 import { IAccountSchema } from "../model/accountModel";
-import mongoose from "mongoose";
 
 interface CategoryInterface {
   _id: string;
@@ -134,6 +133,7 @@ const processTransactionData = async (
     userId: user?._id,
     month: new Date().toISOString().slice(0, 7),
   });
+
   summary.balance = formatCurrency(
     parseFloat(accountBalance?.balance?.toFixed(2)!),
     currencySymbol
@@ -597,6 +597,7 @@ class transactionController {
   async exportTransactionData(req: AuthRequest, res: Response) {
     try {
       const userId = req._id;
+
       const { transactionType, fileFormat, dateRange, isChecking } = req?.query;
 
       const user: any = await User.findById(userId).populate({
@@ -627,17 +628,17 @@ class transactionController {
         });
       }
 
-      const transactionSummaryData = await processTransactionData(
-        transactionData,
-        user
-      );
-
       if (isChecking) {
         return res?.status(200).json({
           success: true,
           message: "Transaction available for download",
         });
       }
+
+      const transactionSummaryData = await processTransactionData(
+        transactionData,
+        user
+      );
 
       // Transform data and handle optional fields
       const flattenedData = transactionData.map((transaction) => {
