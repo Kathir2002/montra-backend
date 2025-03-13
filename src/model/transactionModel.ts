@@ -314,6 +314,7 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
     // Adjust the balance based on transaction type
     if (updatedDoc.transactionType === "Expense") {
       const amountDifference = originalDoc?.amount! - updatedDoc?.amount;
+
       await AccountBalance.editTransaction(
         doc?.user,
         originalDoc?.amount!,
@@ -326,9 +327,8 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
         { user: doc.user, "bankAccounts._id": doc?.wallet?.id },
         {
           $inc: {
-            "bankAccounts.$.balance": amountDifference
-              ? amountDifference
-              : -updatedDoc?.amount,
+            "bankAccounts.$.balance":
+              amountDifference >= 0 ? amountDifference : -updatedDoc?.amount,
             totalAccountBalance: amountDifference,
           },
         },
@@ -380,9 +380,8 @@ transactionSchema.post("findOneAndUpdate", async function (doc) {
         { user: doc.user, "bankAccounts._id": doc?.wallet?.id },
         {
           $inc: {
-            "bankAccounts.$.balance": amountDifference
-              ? amountDifference
-              : updatedDoc?.amount,
+            "bankAccounts.$.balance":
+              amountDifference > 0 ? amountDifference : updatedDoc?.amount,
             totalAccountBalance: amountDifference,
           },
         },

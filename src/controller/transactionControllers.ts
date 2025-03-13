@@ -298,6 +298,19 @@ class transactionController {
               .json({ message: err?.message, success: false });
           });
       }
+      const prevTransaction = await TransactionModel.findById(id);
+
+      const accountBalance = await AccountBalance.findOne({ userId: userId });
+      if (
+        type === "Expense" &&
+        Number(accountBalance?.balance) >
+          Number(prevTransaction?.amount) - amount
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "You don't have enough money in your account",
+        });
+      }
 
       const parsedFrequency = frequency ? JSON.parse(frequency) : {};
       const parsedWallet = wallet ? JSON.parse(wallet) : {};
