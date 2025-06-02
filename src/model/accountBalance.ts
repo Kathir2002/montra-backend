@@ -24,7 +24,6 @@ interface AccountBalanceModel extends Model<IAccountBalanceSchema> {
 
 interface IAccountBalanceSchema {
   userId: mongoose.Types.ObjectId;
-  balance: number;
   totalExpenses: number;
   totalIncome: number;
   month: string;
@@ -37,7 +36,6 @@ const AccountBalanceSchema = new mongoose.Schema<IAccountBalanceSchema>(
       ref: "User",
       required: true,
     },
-    balance: { type: Number, required: true, default: 0 }, // Total balance irrespective of the month
     totalExpenses: { type: Number, required: true, default: 0 }, // Total expenses for the month
     totalIncome: { type: Number, required: true, default: 0 }, // Total income for the month
     month: { type: String, required: true }, // e.g., "2024-12"

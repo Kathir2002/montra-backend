@@ -26,7 +26,7 @@ import moment from "moment";
 import DeviceTokenService from "./deviceTokenController";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import { SecureFileHandler } from "../lib/fileDownloadHelper";
-import { IAccountSchema } from "../model/accountModel";
+import AccountModel, { IAccountSchema } from "../model/accountModel";
 
 interface CategoryInterface {
   _id: string;
@@ -64,18 +64,37 @@ const processTransactionData = async (
   user: any
 ): Promise<TransactionSummary> => {
   const currencySymbol = user?.currency;
+  const intialNum = 0;
   const summary: TransactionSummary = {
     expense: {
-      totalAmount: "",
-      averageAmount: "",
+      totalAmount: formatCurrency(
+        parseFloat(intialNum.toFixed(2)),
+        currencySymbol
+      ),
+      averageAmount: formatCurrency(
+        parseFloat(intialNum.toFixed(2)),
+        currencySymbol
+      ),
       totalTransactionsCount: 0,
-      largestTransactionAmount: "",
+      largestTransactionAmount: formatCurrency(
+        parseFloat(intialNum.toFixed(2)),
+        currencySymbol
+      ),
     },
     income: {
-      totalAmount: "",
-      averageAmount: "",
+      totalAmount: formatCurrency(
+        parseFloat(intialNum.toFixed(2)),
+        currencySymbol
+      ),
+      averageAmount: formatCurrency(
+        parseFloat(intialNum.toFixed(2)),
+        currencySymbol
+      ),
       totalTransactionsCount: 0,
-      largestTransactionAmount: "",
+      largestTransactionAmount: formatCurrency(
+        parseFloat(intialNum.toFixed(2)),
+        currencySymbol
+      ),
     },
     balance: formatCurrency(parseFloat(Number(0).toFixed(2)), currencySymbol),
   };
@@ -129,13 +148,10 @@ const processTransactionData = async (
       ),
     };
   }
-  const accountBalance = await AccountBalance.findOne({
-    userId: user?._id,
-    month: new Date().toISOString().slice(0, 7),
-  });
 
+  const accountBalance = await AccountModel.findById(user?.account);
   summary.balance = formatCurrency(
-    parseFloat(accountBalance?.balance?.toFixed(2)!),
+    parseFloat(accountBalance?.totalAccountBalance?.toFixed(2)!),
     currencySymbol
   );
 
@@ -189,7 +205,11 @@ class transactionController {
       }
       const parsedFrequency = frequency ? JSON.parse(frequency) : {};
 
-      const accountBalance = await AccountBalance.findOne({ userId: userId });
+      const accountData = await AccountModel.findById(user?.account);
+      const parsedWallet = wallet ? JSON.parse(wallet) : {};
+      const accountBalance = accountData?.bankAccounts.find(
+        (bankAccount) => String(bankAccount?._id) === String(parsedWallet?.id)
+      );
 
       if (type === "Expense" && Number(accountBalance?.balance) < amount) {
         return res.status(400).json({
@@ -199,7 +219,6 @@ class transactionController {
       }
       const parsedFrom = from ? JSON.parse(from) : {};
       const parsedTo = to ? JSON.parse(to) : {};
-      const parsedWallet = wallet ? JSON.parse(wallet) : {};
 
       const newTransaction = new TransactionModel({
         user: userId,
@@ -280,7 +299,7 @@ class transactionController {
 
       const userId = req._id;
       let documet = undefined;
-
+      const user = await User.findById(userId);
       if (!type) {
         return res
           .status(400)
@@ -300,7 +319,13 @@ class transactionController {
       }
       const prevTransaction = await TransactionModel.findById(id);
 
-      const accountBalance = await AccountBalance.findOne({ userId: userId });
+      // const accountBalance = await AccountBalance.findOne({ userId: userId });
+
+      const accountData = await AccountModel.findById(user?.account);
+      const parsedWallet = wallet ? JSON.parse(wallet) : {};
+      const accountBalance = accountData?.bankAccounts.find(
+        (bankAccount) => String(bankAccount?._id) === String(parsedWallet?.id)
+      );
       if (
         type === "Expense" &&
         Number(accountBalance?.balance) >
@@ -313,7 +338,6 @@ class transactionController {
       }
 
       const parsedFrequency = frequency ? JSON.parse(frequency) : {};
-      const parsedWallet = wallet ? JSON.parse(wallet) : {};
       const parsedFrom = from ? JSON.parse(from) : {};
       const parsedTo = to ? JSON.parse(to) : {};
 
@@ -731,136 +755,24 @@ class transactionController {
         new Set(flattenedData.flatMap((obj) => Object.keys(obj)))
       );
       const expenseHtmlContent = `
-                  <tr>
-                      <td style="padding: 0 20px;">
-                          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #fbe9eb; border-radius: 6px;">
-                              <tr>
-                                  <td style="padding: 15px;">
-                                      <h3 style="margin: 0; color: #dc3545;">Expenses Breakdown</h3>
-                                      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 10px;">
-                                          <tr>
-                                              <td width="50%" style="padding: 5px; color: #666;">Total Transactions</td>
-                                              <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.expense?.totalTransactionsCount}</td>
-                                          </tr>
-                                          <tr>
-                                              <td width="50%" style="padding: 5px; color: #666;">Average Amount</td>
-                                              <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.expense?.averageAmount}</td>
-                                          </tr>
-                                          <tr>
-                                              <td width="50%" style="padding: 5px; color: #666;">Largest Transaction</td>
-                                              <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.expense?.largestTransactionAmount}</td>
-                                          </tr>
-                                      </table>
-                                  </td>
-                              </tr>
-                          </table>
-                      </td>
-                  </tr>
-                  `;
-
-      const incomeHtmlContent = `
-      <tr>
-        <td style="padding: 0 20px;">
-            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #e8f5e9; border-radius: 6px;">
-                <tr>
-                    <td style="padding: 15px;">
-                        <h3 style="margin: 0; color: #28a745;">Income Breakdown</h3>
-                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 10px;">
-                            <tr>
-                                <td width="50%" style="padding: 5px; color: #666;">Total Transactions</td>
-                                <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.income?.totalTransactionsCount}</td>
-                            </tr>
-                            <tr>
-                                <td width="50%" style="padding: 5px; color: #666;">Average Amount</td>
-                                <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.income?.averageAmount}</td>
-                            </tr>
-                            <tr>
-                                <td width="50%" style="padding: 5px; color: #666;">Largest Transaction</td>
-                                <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.income?.largestTransactionAmount}</td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </td>
-    </tr>
-      `;
-
-      const mailContent = (downloadLink: string) => {
-        return `
-            <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Transaction Report</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
-    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4; padding: 20px;">
-        <tr>
-            <td align="center">
-                <!-- Main Container -->
-                <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                    <!-- Header -->
-                    <tr>
-                        <td align="center" style="padding: 30px 20px; border-bottom: 2px solid #eee;">
-                            <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">Transaction Report</h1>
-                            <p style="margin: 10px 0 0 0; color: #666;">Period: ${moment(
-                              query.transactionDate["$gte"]
-                            ).format("MMMM D")} - ${moment(new Date()).format(
-          "MMMM D, YYYY"
-        )}</p>
-                        </td>
-                    </tr>
-
-                       <!-- Summary -->
                     <tr>
                         <td style="padding: 0 20px;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #e8f4fd; border-radius: 6px;${
-                              transactionType !== "All"
-                                ? "margin-bottom: 20px;"
-                                : "margin-bottom: 0px;"
-                            }">
+                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #fbe9eb; border-radius: 6px;">
                                 <tr>
                                     <td style="padding: 15px;">
-                                        <p style="margin: 0 0 10px 0;">Dear ${
-                                          user?.name
-                                        },</p>
-                                        <p style="margin: 0;">Please find attached your transaction report for the specified period. Below is a summary of key metrics:</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Total Summary -->
-                    ${
-                      transactionType === "All"
-                        ? `
-                      <tr>
-                        <td style="padding: 20px;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8f9fa; border-radius: 6px;">
-                                <tr>
-                                    <td align="center" style="padding: 15px;">
-                                        <h2 style="margin: 0; font-size: 18px; color: #2c3e50;">Overall Summary</h2>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <td>
-                                        <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                        <h3 style="margin: 0; color: #dc3545;">Expenses Breakdown</h3>
+                                        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 10px;">
                                             <tr>
-                                                <td width="33%" align="center" style="padding: 10px;">
-                                                    <p style="margin: 0; font-size: 14px; color: #666;">Total Income</p>
-                                                    <h3 style="margin: 5px 0; color: #28a745;">+${transactionSummaryData?.income?.totalAmount}</h3>
-                                                </td>
-                                                <td width="33%" align="center" style="padding: 10px;">
-                                                    <p style="margin: 0; font-size: 14px; color: #666;">Total Expenses</p>
-                                                    <h3 style="margin: 5px 0; color: #dc3545;">-${transactionSummaryData?.expense?.totalAmount}</h3>
-                                                </td>
-                                                <td width="33%" align="center" style="padding: 10px;">
-                                                    <p style="margin: 0; font-size: 14px; color: #666;">Net Balance</p>
-                                                    <h3 style="margin: 5px 0; color: #17a2b8;">${transactionSummaryData?.balance}</h3>
-                                                </td>
+                                                <td width="50%" style="padding: 5px; color: #666;">Total Transactions</td>
+                                                <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.expense?.totalTransactionsCount}</td>
+                                            </tr>
+                                            <tr>
+                                                <td width="50%" style="padding: 5px; color: #666;">Average Amount</td>
+                                                <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.expense?.averageAmount}</td>
+                                            </tr>
+                                            <tr>
+                                                <td width="50%" style="padding: 5px; color: #666;">Largest Transaction</td>
+                                                <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.expense?.largestTransactionAmount}</td>
                                             </tr>
                                         </table>
                                     </td>
@@ -868,78 +780,196 @@ class transactionController {
                             </table>
                         </td>
                     </tr>
-                      `
+                    `;
+
+      const incomeHtmlContent = `
+        <tr>
+          <td style="padding: 0 20px;">
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #e8f5e9; border-radius: 6px;">
+                  <tr>
+                      <td style="padding: 15px;">
+                          <h3 style="margin: 0; color: #28a745;">Income Breakdown</h3>
+                          <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-top: 10px;">
+                              <tr>
+                                  <td width="50%" style="padding: 5px; color: #666;">Total Transactions</td>
+                                  <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.income?.totalTransactionsCount}</td>
+                              </tr>
+                              <tr>
+                                  <td width="50%" style="padding: 5px; color: #666;">Average Amount</td>
+                                  <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.income?.averageAmount}</td>
+                              </tr>
+                              <tr>
+                                  <td width="50%" style="padding: 5px; color: #666;">Largest Transaction</td>
+                                  <td width="50%" align="right" style="padding: 5px;">${transactionSummaryData?.income?.largestTransactionAmount}</td>
+                              </tr>
+                          </table>
+                      </td>
+                  </tr>
+              </table>
+          </td>
+      </tr>
+        `;
+
+      const mailContent = (downloadLink: string) => {
+        return `
+              <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+  <html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+      <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+      <title>Transaction Report</title>
+  </head>
+  <body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f4f4f4;">
+      <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4; padding: 20px;">
+          <tr>
+              <td align="center">
+                  <!-- Main Container -->
+                  <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                      <!-- Header -->
+                      <tr>
+                          <td align="center" style="padding: 30px 20px; border-bottom: 2px solid #eee;">
+                              <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">Transaction Report</h1>
+                              <p style="margin: 10px 0 0 0; color: #666;">Period: ${
+                                dateRange === "lifeTime"
+                                  ? "Lifetime"
+                                  : moment(
+                                      query.transactionDate["$gte"]
+                                    ).format("MMMM D")
+                              }${
+          dateRange === "lifeTime"
+            ? ""
+            : " - " + moment(new Date()).format("MMMM D, YYYY")
+        }</p>
+                          </td>
+                      </tr>
+
+                        <!-- Summary -->
+                      <tr>
+                          <td style="padding: 0 20px;">
+                              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #e8f4fd; border-radius: 6px;${
+                                transactionType !== "All"
+                                  ? "margin-bottom: 20px;"
+                                  : "margin-bottom: 0px;"
+                              }">
+                                  <tr>
+                                      <td style="padding: 15px;">
+                                          <p style="margin: 0 0 10px 0;">Dear ${
+                                            user?.name
+                                          },</p>
+                                          <p style="margin: 0;">Please find attached your transaction report for the specified period. Below is a summary of key metrics:</p>
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
+
+                      <!-- Total Summary -->
+                      ${
+                        transactionType === "All"
+                          ? `
+                        <tr>
+                          <td style="padding: 20px;">
+                              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8f9fa; border-radius: 6px;">
+                                  <tr>
+                                      <td align="center" style="padding: 15px;">
+                                          <h2 style="margin: 0; font-size: 18px; color: #2c3e50;">Overall Summary</h2>
+                                      </td>
+                                  </tr>
+                                  <tr>
+                                      <td>
+                                          <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                              <tr>
+                                                  <td width="33%" align="center" style="padding: 10px;">
+                                                      <p style="margin: 0; font-size: 14px; color: #666;">Total Income</p>
+                                                      <h3 style="margin: 5px 0; color: #28a745;">+ ${transactionSummaryData?.income?.totalAmount}</h3>
+                                                  </td>
+                                                  <td width="33%" align="center" style="padding: 10px;">
+                                                      <p style="margin: 0; font-size: 14px; color: #666;">Total Expenses</p>
+                                                      <h3 style="margin: 5px 0; color: #dc3545;">- ${transactionSummaryData?.expense?.totalAmount}</h3>
+                                                  </td>
+                                                  <td width="33%" align="center" style="padding: 10px;">
+                                                      <p style="margin: 0; font-size: 14px; color: #666;">Net Balance</p>
+                                                      <h3 style="margin: 5px 0; color: #17a2b8;">${transactionSummaryData?.balance}</h3>
+                                                  </td>
+                                              </tr>
+                                          </table>
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
+                        `
+                          : ""
+                      }
+                
+
+                      <!-- Income Section -->
+                      ${
+                        String(transactionType)?.toUpperCase() === "ALL" ||
+                        String(transactionType)?.toUpperCase() === "INCOME"
+                          ? incomeHtmlContent || ""
+                          : ""
+                      }
+
+                      <!-- Expenses Section -->
+                    ${
+                      transactionType == "All"
+                        ? expenseHtmlContent
+                        : transactionType == "Expense"
+                        ? expenseHtmlContent
                         : ""
                     }
-               
+                      
 
-                    <!-- Income Section -->
-                     ${
-                       String(transactionType)?.toUpperCase() === "ALL" ||
-                       String(transactionType)?.toUpperCase() === "INCOME"
-                         ? incomeHtmlContent || ""
-                         : ""
-                     }
+                      <!-- Note & Download Section -->
+                      <tr>
+                          <td style="padding: 0 20px 20px;">
+                              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fff3cd; border-radius: 6px;">
+                                  <tr>
+                                      <td style="padding: 15px;">
+                                          <p style="margin: 0; font-size: 14px;">
+                                              <strong>Note:</strong> Detailed transaction history is available in the attached ${fileFormat} file. Click below to download the complete report.
+                                          </p>
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
 
-                    <!-- Expenses Section -->
-                  ${
-                    transactionType == "All"
-                      ? expenseHtmlContent
-                      : transactionType == "Expense"
-                      ? expenseHtmlContent
-                      : ""
-                  }
-                    
+                      <!-- Download Button -->
+                      <tr>
+                          <td align="center" style="padding: 0 20px 30px;">
+                              <table border="0" cellpadding="0" cellspacing="0">
+                                  <tr>
+                                      <td align="center" style="background-color: #007bff; border-radius: 5px;">
+                                          <a href=${downloadLink} style="display: inline-block; padding: 12px 25px; color: #ffffff; text-decoration: none; font-weight: bold;">Download Complete Report</a>
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
 
-                    <!-- Note & Download Section -->
-                    <tr>
-                        <td style="padding: 0 20px 20px;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fff3cd; border-radius: 6px;">
-                                <tr>
-                                    <td style="padding: 15px;">
-                                        <p style="margin: 0; font-size: 14px;">
-                                            <strong>Note:</strong> Detailed transaction history is available in the attached ${fileFormat} file. Click below to download the complete report.
-                                        </p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                    <!-- Download Button -->
-                    <tr>
-                        <td align="center" style="padding: 0 20px 30px;">
-                            <table border="0" cellpadding="0" cellspacing="0">
-                                <tr>
-                                    <td align="center" style="background-color: #007bff; border-radius: 5px;">
-                                        <a href=${downloadLink} style="display: inline-block; padding: 12px 25px; color: #ffffff; text-decoration: none; font-weight: bold;">Download Complete Report</a>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-
-                     <!-- Footer -->
-                    <tr>
-                        <td style="padding: 20px; border-top: 2px solid #eee;">
-                            <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td align="center" style="color: #666; font-size: 12px;">
-                                        <p style="margin: 0 0 10px 0;">This is an automated report generated on ${new Date().toLocaleDateString()}.</p>
-                                        <p style="margin: 0;">For any queries, please contact our support team.</p>
-                                        <p style="margin: 10px 0 0 0;">© ${new Date().getFullYear()} Montra. All rights reserved.</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-    </table>
-</body>
-</html>
-            `;
+                      <!-- Footer -->
+                      <tr>
+                          <td style="padding: 20px; border-top: 2px solid #eee;">
+                              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                                  <tr>
+                                      <td align="center" style="color: #666; font-size: 12px;">
+                                          <p style="margin: 0 0 10px 0;">This is an automated report generated on ${new Date().toLocaleDateString()}.</p>
+                                          <p style="margin: 0;">For any queries, please contact our support team.</p>
+                                          <p style="margin: 10px 0 0 0;">© ${new Date().getFullYear()} Montra. All rights reserved.</p>
+                                      </td>
+                                  </tr>
+                              </table>
+                          </td>
+                      </tr>
+                  </table>
+              </td>
+          </tr>
+      </table>
+  </body>
+  </html>
+              `;
       };
 
       const fileHandler = new SecureFileHandler();
@@ -975,6 +1005,8 @@ class transactionController {
                 : "Detailed Income Summary"
               : "Detailed Transaction Summary",
         });
+        // Convert CSV string to a buffer
+        const csvBuffer = Buffer.from(csv, "utf-8");
 
         // Send CSV directly
         res.setHeader("Content-Type", "text/csv");
@@ -982,7 +1014,8 @@ class transactionController {
           "Content-Disposition",
           `attachment; filename=${fileName}`
         );
-        return res.status(200).send(csv);
+
+        res.send(csvBuffer);
       } else if (fileFormat === "Excel") {
         // Create workbook and worksheet
         const workbook = XLSX.utils.book_new();

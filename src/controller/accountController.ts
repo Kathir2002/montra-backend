@@ -106,14 +106,11 @@ class accountController {
       await profile.save();
 
       if (balance) {
-        await AccountBalance.findOneAndUpdate(
-          { userId: new ObjectId(userId) },
-          {
-            $set: {
-              balance: newTotalBalance,
-            },
-          }
-        );
+        await User.findByIdAndUpdate(userId, {
+          $set: {
+            balance: newTotalBalance,
+          },
+        });
       }
 
       return res
@@ -184,9 +181,9 @@ class accountController {
           { new: true }
         );
         if (accountData) {
-          await AccountBalance.updateOne(
+          await User.updateOne(
             {
-              userId: userId,
+              _id: userId,
             },
             {
               $inc: {
@@ -240,10 +237,17 @@ class accountController {
         userId: userId,
       });
 
+      const userData = await User.findById(userId);
+
+      const accountBalance = await AccountModel.findById(userData?.account);
       if (!data.length) {
         return res.status(200).json({
           success: true,
-          balanceData: { totalExpenses: 0, totalIncome: 0, balance: 0 },
+          balanceData: {
+            totalExpenses: 0,
+            totalIncome: 0,
+            balance: accountBalance?.totalAccountBalance,
+          },
         });
       }
 
@@ -252,7 +256,6 @@ class accountController {
         monthDateObj.getMonth() + 1,
         0
       );
-      const accountBalance = data?.find((datum) => datum?.balance)?.balance;
 
       const filteredData = data?.filter((datum) => {
         return datum?.month === filterDate.toISOString().slice(0, 7);
@@ -263,16 +266,19 @@ class accountController {
       if (!balanceData?.length) {
         cleanedBalanceData = {
           userId: userId,
-          balance: accountBalance,
           month: filterDate.toISOString().slice(0, 7),
           totalExpenses: 0,
           totalIncome: 0,
         };
       }
 
-      return res
-        .status(200)
-        .json({ success: true, balanceData: cleanedBalanceData });
+      return res.status(200).json({
+        success: true,
+        balanceData: {
+          ...cleanedBalanceData,
+          balance: accountBalance?.totalAccountBalance,
+        },
+      });
     } catch (err: any) {
       console.log(err);
       return res.status(500).json({ success: false, message: err?.message });
