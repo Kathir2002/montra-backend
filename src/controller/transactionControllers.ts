@@ -315,20 +315,15 @@ class transactionController {
               .json({ message: err?.message, success: false });
           });
       }
-      const prevTransaction = await TransactionModel.findById(id);
-
-      // const accountBalance = await AccountBalance.findOne({ userId: userId });
+      // const prevTransaction = await TransactionModel.findById(id);
 
       const accountData = await AccountModel.findById(user?.account);
       const parsedWallet = wallet ? JSON.parse(wallet) : {};
       const accountBalance = accountData?.bankAccounts.find(
         (bankAccount) => String(bankAccount?._id) === String(parsedWallet?.id)
       );
-      if (
-        type === "Expense" &&
-        Number(accountBalance?.balance) >
-          Number(prevTransaction?.amount) - amount
-      ) {
+
+      if (type === "Expense" && Number(accountBalance?.balance) < amount) {
         return res.status(400).json({
           success: false,
           message: "You don't have enough money in your account",
@@ -968,7 +963,6 @@ class transactionController {
         const csv = json2csvParser.parse(flattenedData);
         const fileName = `transactions_${Date.now()}.csv`;
 
-
         sendMail({
           to: user.email,
           fileName,
@@ -1030,8 +1024,6 @@ class transactionController {
           bookSST: false,
         });
         const fileName = `transactions_${Date.now()}.xlsx`;
-       
-
 
         await sendMail({
           to: user.email,
