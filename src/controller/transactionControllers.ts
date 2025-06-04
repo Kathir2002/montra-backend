@@ -19,13 +19,11 @@ import {
   IPushNotificationPayload,
   sendMail,
 } from "../lib/functions";
-import AccountBalance from "../model/accountBalance";
 import User from "../model/userModel";
 import BudgetModel from "../model/budgetModel";
 import moment from "moment";
 import DeviceTokenService from "./deviceTokenController";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
-import { SecureFileHandler } from "../lib/fileDownloadHelper";
 import AccountModel, { IAccountSchema } from "../model/accountModel";
 
 interface CategoryInterface {
@@ -810,7 +808,7 @@ class transactionController {
       </tr>
         `;
 
-      const mailContent = (downloadLink: string) => {
+      const mailContent = () => {
         return `
               <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
   <html xmlns="http://www.w3.org/1999/xhtml">
@@ -928,21 +926,8 @@ class transactionController {
                                   <tr>
                                       <td style="padding: 15px;">
                                           <p style="margin: 0; font-size: 14px;">
-                                              <strong>Note:</strong> Detailed transaction history is available in the attached ${fileFormat} file. Click below to download the complete report.
+                                              <strong>Note:</strong> Detailed transaction history is available in the attached ${fileFormat} file.
                                           </p>
-                                      </td>
-                                  </tr>
-                              </table>
-                          </td>
-                      </tr>
-
-                      <!-- Download Button -->
-                      <tr>
-                          <td align="center" style="padding: 0 20px 30px;">
-                              <table border="0" cellpadding="0" cellspacing="0">
-                                  <tr>
-                                      <td align="center" style="background-color: #007bff; border-radius: 5px;">
-                                          <a href=${downloadLink} style="display: inline-block; padding: 12px 25px; color: #ffffff; text-decoration: none; font-weight: bold;">Download Complete Report</a>
                                       </td>
                                   </tr>
                               </table>
@@ -972,7 +957,6 @@ class transactionController {
               `;
       };
 
-      const fileHandler = new SecureFileHandler();
       if (fileFormat === "CSV") {
         const json2csvParser = new Parser({
           fields,
@@ -983,15 +967,12 @@ class transactionController {
 
         const csv = json2csvParser.parse(flattenedData);
         const fileName = `transactions_${Date.now()}.csv`;
-        const tempFileName = await fileHandler.saveTemporaryFile(csv, fileName);
 
-        const { token, timestamp } = fileHandler.generateToken(tempFileName);
-        const downloadLink = `${process.env.BASE_URL}/download/${tempFileName}?token=${token}&timestamp=${timestamp}`;
 
         sendMail({
           to: user.email,
           fileName,
-          html: mailContent(downloadLink),
+          html: mailContent(),
           fileContent: csv,
           fileType: "text/csv",
           subject:
@@ -1049,18 +1030,13 @@ class transactionController {
           bookSST: false,
         });
         const fileName = `transactions_${Date.now()}.xlsx`;
-        const tempFileName = await fileHandler.saveTemporaryFile(
-          excelBuffer,
-          fileName
-        );
+       
 
-        const { token, timestamp } = fileHandler.generateToken(tempFileName);
-        const downloadLink = `${process.env.BASE_URL}/download/${tempFileName}?token=${token}&timestamp=${timestamp}`;
 
         await sendMail({
           to: user.email,
           fileName,
-          html: mailContent(downloadLink),
+          html: mailContent(),
           fileContent: excelBuffer,
           fileType:
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1138,63 +1114,6 @@ class transactionController {
       });
     } catch (err: any) {
       return res.status(500).json({ success: false, message: err?.message });
-    }
-  }
-  async downloadTransction(req: Request, res: Response) {
-    const fileHandler = new SecureFileHandler();
-    const { fileName } = req.params;
-    const { token, timestamp } = req.query;
-
-    try {
-      const timestampNum = parseInt(timestamp as string);
-      if (isNaN(timestampNum)) {
-        return res.status(400).send("Invalid timestamp");
-      }
-      // Verify token
-      const isValid = fileHandler.verifyToken(
-        fileName,
-        token as string,
-        timestampNum
-      );
-
-      if (!isValid) {
-        return res.status(403).send("Invalid download link");
-      }
-
-      // Check if link has expired
-      if (Date.now() > timestampNum + fileHandler.getExpiryTime()) {
-        const filePath = path.join("temp/downloads", fileName);
-
-        // Check if file exists
-        await fs.access(filePath);
-        fs.unlink(filePath).catch(console.error);
-
-        return res.status(410).send("Download link has expired");
-      }
-
-      const filePath = path.join("temp/downloads", fileName);
-
-      // Check if file exists
-      await fs.access(filePath);
-
-      // Set headers and send file
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader(
-        "Content-Disposition",
-        `attachment; filename="${fileName}"`
-      );
-
-      const fileStream = require("fs").createReadStream(filePath);
-      fileStream.pipe(res);
-
-      // Optional: Delete file after download
-      fileStream.on("end", () => {
-        fs.unlink(filePath).catch(console.error);
-      });
-    } catch (error) {
-      console.log(error);
-
-      res.status(404).send("File not found");
     }
   }
 }

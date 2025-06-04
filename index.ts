@@ -16,8 +16,6 @@ import { budgetRouter } from "./src/routes/budgetRoutes";
 import "./src/helper/jobScheduler";
 import "./src/helper/notificationScheduler";
 import "./src/helper/budgetNotificationScheduler";
-import "./src/helper/attachmentDeleteScheduler";
-import Transaction from "./src/controller/transactionControllers";
 import { contactSupportRouter } from "./src/routes/contactSupportRoute";
 import { createServer } from "http";
 import { initializeSocket } from "./src/helper/socket";
@@ -47,7 +45,6 @@ app.use("/api/account", verifyToken, accountRouter);
 app.use("/api/transaction", verifyToken, transactionRouter);
 app.use("/api/budget", verifyToken, budgetRouter);
 app.use("/api/contact-support", verifyToken, contactSupportRouter);
-app.get("/download/:fileName", Transaction.downloadTransction);
 
 app.get("/", async (req, res) => {
   res.status(200).json({ message: "Server is running" });
