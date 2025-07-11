@@ -227,7 +227,6 @@ DeviceTokenSchema.statics.registerDeviceToken = async function (
 DeviceTokenSchema.statics.transferToken = async function (
   fcmToken,
   fromUserId,
-  toUserId // kept for tracking purposes even if not directly used
 ) {
   try {
     // Just deactivate token for previous user

@@ -80,7 +80,7 @@ class DeviceTokenService {
     android: AndroidConfig
   ) {
     const activeTokens = await DeviceToken.getActiveTokens(userId);
-
+    
     const notificationPromises = activeTokens.map(async (token: IToken) => {
       try {
         await sendPushNotification(

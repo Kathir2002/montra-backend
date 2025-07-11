@@ -292,7 +292,7 @@ export async function sendPushNotification(
       data: data || {}, // Optional additional data
       token: deviceToken,
     };
-
+    
     // Send a message to the device corresponding to the provided registration token
     const response = await admin.messaging().send(message);
     console.log("Successfully sent message:");

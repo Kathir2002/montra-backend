@@ -158,7 +158,7 @@ function createNotification() {
   };
 }
 
-// Function to schedule notifications
+// Function to schedule notifications for tips & tricks
 function scheduleNotification(cronExpression: string) {
   cron.schedule(
     cronExpression,
@@ -196,9 +196,11 @@ function scheduleNotification(cronExpression: string) {
     { timezone: "Asia/Kolkata", recoverMissedExecutions: false }
   );
 }
+// const cronExpression = "* * * * *";
 const cronExpression = "0 17 * * *";
 scheduleNotification(cronExpression);
 
+// function to delete the user's account, budget model data  
 const deletableRemaingData = async (
   userData: UserSchema,
   deletionDate: Date
@@ -244,6 +246,7 @@ const deletableRemaingData = async (
     });
 };
 
+//cron job for deleting the user account
 const scheduleDeactivateAccount = async (cronExpression: string) => {
   cron.schedule(
     cronExpression,

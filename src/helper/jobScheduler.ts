@@ -6,7 +6,9 @@ import TransactionModel, {
 import User from "../model/userModel";
 import Transaction from "../controller/transactionControllers";
 import { Response } from "express";
+import DeviceToken from "../model/deviceFCMTokenModel";
 
+//cron job for handling transaction frequency 
 const getUser = async () => {
   const users = await User.find({});
   users.forEach(async (user) => {
@@ -70,4 +72,32 @@ const getUser = async () => {
     }
   });
 };
+
 getUser();
+
+const deleteInactiveDeviceToken = async (cronExp:string) =>{
+  cron.schedule(cronExp, async () => {
+  await DeviceToken.updateMany(
+  {},
+  {
+    $pull: {
+      tokens: {
+        $and: [
+          { isActive: false },
+          { lastActiveAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+        ]
+      }
+    }
+  }
+);
+
+  },
+ {
+      timezone: "Asia/Kolkata",
+      recoverMissedExecutions: false,
+    }
+  )
+}
+
+const cronExp = "0 0 * * *";
+deleteInactiveDeviceToken(cronExp);

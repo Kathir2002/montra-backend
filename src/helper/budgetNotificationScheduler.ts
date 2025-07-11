@@ -5,7 +5,7 @@ import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import BudgetModel from "../model/budgetModel";
 import moment from "moment";
 
-// Function to schedule notifications
+// Function to schedule notifications for budget
 function scheduleNotification(cronExpression: string) {
   cron.schedule(
     cronExpression,
@@ -34,6 +34,7 @@ function scheduleNotification(cronExpression: string) {
                         screen: "Budget",
                       },
                     };
+                                        
                     const androidConfig: AndroidConfig = {
                       notification: {
                         channelId: "budget",
@@ -57,5 +58,6 @@ function scheduleNotification(cronExpression: string) {
     { timezone: "Asia/Kolkata", recoverMissedExecutions: false }
   );
 }
-const cronExpression = "30 18 * * *";
+const cronExpression = "* * * * *";
+// const cronExpression = "30 18 * * *";
 scheduleNotification(cronExpression);
