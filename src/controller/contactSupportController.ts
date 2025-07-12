@@ -365,9 +365,10 @@ class contactSupportController {
 
       // Step 3: Fetch all replies that are being referenced in `replyTo`
       const replyToData = await ContactSupportModel.findOne(
-        { _id: request_id },
-        { replies: 1 } // Fetch only the `replies` field
-      ).lean();
+        { request_id }, 
+      )
+      .select("replies") // Fetch only the `replies` field
+      .lean();
 
       // Step 4: Create a reply lookup map
       const replyMap = new Map(
@@ -445,9 +446,9 @@ class contactSupportController {
       const chat: any = await supportRequest.save();
 
       const replyToData = await ContactSupportModel.findOne(
-        { _id: request_id },
-        { replies: 1 } // Fetch only the `replies` field
-      ).lean();
+        {  request_id })
+        .select("replies") // Fetch only the `replies` field
+        .lean();
 
       // Step 4: Create a reply lookup map
       const replyMap = new Map(
