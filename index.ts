@@ -27,6 +27,11 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(cors({ origin: "*" }));
 
+app.use((req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
+
 const cloudinary = cloud.v2;
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_NAME,
