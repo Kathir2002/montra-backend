@@ -125,19 +125,20 @@ DeviceTokenSchema.statics.logoutToken = async function (userId, fcmToken) {
 };
 
 // Static method to delete inactive fcm token
-DeviceTokenSchema.statics.deleteToken = async function (userId, fcmToken) {
-  const deviceTokenDoc = await this.findOne({ user: userId });
+DeviceTokenSchema.statics.deleteToken = async function (
+  userId: mongoose.Types.ObjectId,
+  fcmToken: string
+) {
+  await this.updateOne(
+    { user: userId },
+    {
+      $pull: {
+        tokens: { fcmToken },
+      },
+    }
+  );
 
-  if (deviceTokenDoc) {
-    deviceTokenDoc.tokens = deviceTokenDoc.tokens.filter(
-      (token: IToken) => token.fcmToken !== fcmToken
-    );
-
-    await deviceTokenDoc.save();
-    return true;
-  }
-
-  return false;
+  return true;
 };
 
 // Static method to get active tokens

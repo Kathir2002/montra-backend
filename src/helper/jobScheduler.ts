@@ -75,24 +75,24 @@ const getUser = async () => {
 
 getUser();
 
-const deleteInactiveDeviceToken = async (cronExp:string) =>{
+const deleteInactiveDeviceToken = async (cronExp: string) => {
   cron.schedule(cronExp, async () => {
-  await DeviceToken.updateMany(
-  {},
-  {
-    $pull: {
-      tokens: {
-        $and: [
-          { isActive: false },
-          { lastActiveAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
-        ]
+    await DeviceToken.updateMany(
+      {},
+      {
+        $pull: {
+          tokens: {
+            $and: [
+              { isActive: false },
+              { lastActiveAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } }
+            ]
+          }
+        }
       }
-    }
-  }
-);
+    );
 
   },
- {
+    {
       timezone: "Asia/Kolkata",
       recoverMissedExecutions: false,
     }
