@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import bcrypt from "bcrypt";
+import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../model/userModel";
 import {
@@ -114,8 +114,8 @@ const accountReactivateMailSender = async (
             <div class="success-message">
                 <p>Great news! Your account has been successfully reactivated following your recent login on
                     ${moment(user?.lastLoginDate).format(
-                      "dddd D MMMM YYYY  HH:mm"
-                    )}.</p>
+      "dddd D MMMM YYYY  HH:mm"
+    )}.</p>
             </div>
 
             <p>Your account has been fully restored with all your previous settings and data. You can now continue using
@@ -127,8 +127,8 @@ const accountReactivateMailSender = async (
                 <ul>
                     <li>Device: ${user?.device}</li>
                     <li>Time: ${moment(user?.loginDate).format(
-                      "dddd D MMMM YYYY  HH:mm"
-                    )}</li>
+      "dddd D MMMM YYYY  HH:mm"
+    )}</li>
                 </ul>
             </div>
 <div style="text-align:center">
@@ -358,8 +358,8 @@ class auth {
         activeContactRequestCount: existingUser.isAdmin
           ? activeRequestCount
           : existingUser?.contactSupport?.length
-          ? existingUser?.contactSupport?.length
-          : 0,
+            ? existingUser?.contactSupport?.length
+            : 0,
         isAdmin: existingUser.isAdmin,
       };
       const encryptedToken = encryptDetails(jwtToken);
@@ -412,8 +412,8 @@ class auth {
         activeContactRequestCount: user?.isAdmin
           ? activeRequestCount
           : user?.contactSupport?.length
-          ? user?.contactSupport?.length
-          : 0,
+            ? user?.contactSupport?.length
+            : 0,
         isAdmin: user.isAdmin,
       };
       res.status(200).json({ user: userData, success: true });
@@ -427,6 +427,7 @@ class auth {
       const token =
         req.headers.authorization?.split(" ")[1] ||
         req.headers.Authorization?.split(" ")[1];
+
       const CLIENT_ID =
         process.env.NODE_ENV === "development"
           ? process.env.DEV_GOOGLE_OAUTH_CLIENT
@@ -511,8 +512,8 @@ class auth {
             activeContactRequestCount: existingUser?.isAdmin
               ? activeRequestCount
               : existingUser?.contactSupport?.length
-              ? existingUser?.contactSupport?.length
-              : 0,
+                ? existingUser?.contactSupport?.length
+                : 0,
           };
           const jwtToken = jwt.sign(
             {
@@ -560,8 +561,8 @@ class auth {
               activeContactRequestCount: existingUser?.isAdmin
                 ? activeRequestCount
                 : existingUser?.contactSupport?.length
-                ? existingUser?.contactSupport?.length
-                : 0,
+                  ? existingUser?.contactSupport?.length
+                  : 0,
             };
             await accountReactivateMailSender(userData);
           }

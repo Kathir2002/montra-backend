@@ -1,4 +1,4 @@
-import {  Response } from "express";
+import { Response } from "express";
 import { Parser } from "json2csv";
 import XLSX from "xlsx";
 
@@ -235,15 +235,15 @@ class transactionController {
         endAfter: isRepeat ? endAfter : undefined,
         frequency: isRepeat
           ? {
-              frequencyType: parsedFrequency?.frequencyType
-                ? parsedFrequency?.frequencyType
-                : undefined,
-              day: parsedFrequency?.day ? parsedFrequency?.day : undefined,
-              date: parsedFrequency?.date ? parsedFrequency?.date : undefined,
-              month: parsedFrequency?.month
-                ? parsedFrequency?.month
-                : undefined,
-            }
+            frequencyType: parsedFrequency?.frequencyType
+              ? parsedFrequency?.frequencyType
+              : undefined,
+            day: parsedFrequency?.day ? parsedFrequency?.day : undefined,
+            date: parsedFrequency?.date ? parsedFrequency?.date : undefined,
+            month: parsedFrequency?.month
+              ? parsedFrequency?.month
+              : undefined,
+          }
           : undefined,
       });
       const save = await newTransaction.save();
@@ -355,15 +355,15 @@ class transactionController {
           endAfter: isRepeat ? endAfter : undefined,
           frequency: isRepeat
             ? {
-                frequencyType: parsedFrequency?.frequencyType
-                  ? parsedFrequency?.frequencyType
-                  : undefined,
-                day: parsedFrequency?.day ? parsedFrequency?.day : undefined,
-                date: parsedFrequency?.date ? parsedFrequency?.date : undefined,
-                month: parsedFrequency?.month
-                  ? parsedFrequency?.month
-                  : undefined,
-              }
+              frequencyType: parsedFrequency?.frequencyType
+                ? parsedFrequency?.frequencyType
+                : undefined,
+              day: parsedFrequency?.day ? parsedFrequency?.day : undefined,
+              date: parsedFrequency?.date ? parsedFrequency?.date : undefined,
+              month: parsedFrequency?.month
+                ? parsedFrequency?.month
+                : undefined,
+            }
             : undefined,
         },
         { new: true }
@@ -681,8 +681,8 @@ class transactionController {
           Type: transaction.transactionType || "",
           Date: transaction.transactionDate
             ? moment(new Date(transaction.transactionDate)).format(
-                "DD MMM, hh:mm A"
-              )
+              "DD MMM, hh:mm A"
+            )
             : "",
           Account: accountName || "",
           "Payment Mode": transaction.paymentMode || "",
@@ -694,18 +694,16 @@ class transactionController {
         }
         if (transaction.frequency) {
           if (transaction?.frequency.frequencyType === "yearly") {
-            baseData["Frequency"] = `${
-              transaction.frequency.frequencyType
-            } - Every ${moment()
-              .month(Number(transaction.frequency.month) - 1)
-              .date(Number(transaction.frequency.date))
-              .format("MMM, Do")}`;
+            baseData["Frequency"] = `${transaction.frequency.frequencyType
+              } - Every ${moment()
+                .month(Number(transaction.frequency.month) - 1)
+                .date(Number(transaction.frequency.date))
+                .format("MMM, Do")}`;
           } else if (transaction?.frequency.frequencyType === "monthly") {
-            baseData["Frequency"] = `${
-              transaction.frequency.frequencyType
-            } - Every ${moment()
-              .date(Number(transaction.frequency.date))
-              .format("Do")}`;
+            baseData["Frequency"] = `${transaction.frequency.frequencyType
+              } - Every ${moment()
+                .date(Number(transaction.frequency.date))
+                .format("Do")}`;
           } else if (transaction?.frequency.frequencyType === "weekly") {
             baseData[
               "Frequency"
@@ -820,33 +818,29 @@ class transactionController {
                       <tr>
                           <td align="center" style="padding: 30px 20px; border-bottom: 2px solid #eee;">
                               <h1 style="margin: 0; color: #2c3e50; font-size: 24px;">Transaction Report</h1>
-                              <p style="margin: 10px 0 0 0; color: #666;">Period: ${
-                                dateRange === "lifeTime"
-                                  ? "Lifetime"
-                                  : moment(
-                                      query.transactionDate["$gte"]
-                                    ).format("MMMM D")
-                              }${
-          dateRange === "lifeTime"
+                              <p style="margin: 10px 0 0 0; color: #666;">Period: ${dateRange === "lifeTime"
+            ? "Lifetime"
+            : moment(
+              query.transactionDate["$gte"]
+            ).format("MMMM D")
+          }${dateRange === "lifeTime"
             ? ""
             : " - " + moment(new Date()).format("MMMM D, YYYY")
-        }</p>
+          }</p>
                           </td>
                       </tr>
 
                         <!-- Summary -->
                       <tr>
                           <td style="padding: 0 20px;">
-                              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #e8f4fd; border-radius: 6px;${
-                                transactionType !== "All"
-                                  ? "margin-bottom: 20px;"
-                                  : "margin-bottom: 0px;"
-                              }">
+                              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #e8f4fd; border-radius: 6px;${transactionType !== "All"
+            ? "margin-bottom: 20px;"
+            : "margin-bottom: 0px;"
+          }">
                                   <tr>
                                       <td style="padding: 15px;">
-                                          <p style="margin: 0 0 10px 0;">Dear ${
-                                            user?.name
-                                          },</p>
+                                          <p style="margin: 0 0 10px 0;">Dear ${user?.name
+          },</p>
                                           <p style="margin: 0;">Please find attached your transaction report for the specified period. Below is a summary of key metrics:</p>
                                       </td>
                                   </tr>
@@ -855,9 +849,8 @@ class transactionController {
                       </tr>
 
                       <!-- Total Summary -->
-                      ${
-                        transactionType === "All"
-                          ? `
+                      ${transactionType === "All"
+            ? `
                         <tr>
                           <td style="padding: 20px;">
                               <table border="0" cellpadding="0" cellspacing="0" width="100%" style="margin-bottom: 20px; background-color: #f8f9fa; border-radius: 6px;">
@@ -890,26 +883,24 @@ class transactionController {
                           </td>
                       </tr>
                         `
-                          : ""
-                      }
+            : ""
+          }
                 
 
                       <!-- Income Section -->
-                      ${
-                        String(transactionType)?.toUpperCase() === "ALL" ||
-                        String(transactionType)?.toUpperCase() === "INCOME"
-                          ? incomeHtmlContent || ""
-                          : ""
-                      }
+                      ${String(transactionType)?.toUpperCase() === "ALL" ||
+            String(transactionType)?.toUpperCase() === "INCOME"
+            ? incomeHtmlContent || ""
+            : ""
+          }
 
                       <!-- Expenses Section -->
-                    ${
-                      transactionType == "All"
-                        ? expenseHtmlContent
-                        : transactionType == "Expense"
-                        ? expenseHtmlContent
-                        : ""
-                    }
+                    ${transactionType == "All"
+            ? expenseHtmlContent
+            : transactionType == "Expense"
+              ? expenseHtmlContent
+              : ""
+          }
                       
 
                       <!-- Note & Download Section -->
@@ -973,10 +964,10 @@ class transactionController {
                 ? `Expense Summary for last ${dateRange}`
                 : "Detailed Expense Summary"
               : transactionType === "Income"
-              ? dateRange !== "lifeTime"
-                ? `Income Summary for last ${dateRange}`
-                : "Detailed Income Summary"
-              : "Detailed Transaction Summary",
+                ? dateRange !== "lifeTime"
+                  ? `Income Summary for last ${dateRange}`
+                  : "Detailed Income Summary"
+                : "Detailed Transaction Summary",
         });
         // Convert CSV string to a buffer
         const csvBuffer = Buffer.from(csv, "utf-8");
@@ -1036,10 +1027,10 @@ class transactionController {
                 ? `Expense Summary for last ${dateRange}`
                 : "Detailed Expense Summary"
               : transactionType === "Income"
-              ? dateRange !== "lifeTime"
-                ? `Income Summary for last ${dateRange}`
-                : "Detailed Income Summary"
-              : "Detailed Transaction Summary",
+                ? dateRange !== "lifeTime"
+                  ? `Income Summary for last ${dateRange}`
+                  : "Detailed Income Summary"
+                : "Detailed Transaction Summary",
         });
         // Set response headers
         res.setHeader(
