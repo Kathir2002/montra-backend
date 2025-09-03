@@ -2,11 +2,15 @@
   "name": "expensetrackerbackend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.ts",
+  "main": "index.js",
   "scripts": {
+    "clean-dist": "if exist dist rmdir /s /q dist && mkdir dist || mkdir dist",
+    "build": "npm run clean-dist && tsc && npm run copy-files && npm run copy-node_modules",
+    "copy-files": "xcopy src dist\\src /E /H /C /I && xcopy *.json dist /C /I && xcopy .env dist /C /I && xcopy .catalystrc dist /C /I",
+    "copy-node_modules": "xcopy node_modules dist\\node_modules /E /H /C /I",
     "dev": "nodemon index.ts",
-    "build": "tsc",
-    "start": " node dist/index.js"
+    "start": " node index.js",
+    "deploy": "npm run build && cd dist && catalyst deploy"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +19,7 @@
     "node": "20"
   },
   "dependencies": {
-    "bcrypt": "^5.1.1",
+    "bcryptjs": "^3.0.2",
     "body-parser": "^1.20.2",
     "cloudinary": "^2.3.1",
     "cors": "^2.8.5",
@@ -36,7 +40,6 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@types/bcrypt": "^5.0.2",
     "@types/cors": "^2.8.17",
     "@types/crypto-js": "^4.2.2",
     "@types/express": "^4.17.21",
