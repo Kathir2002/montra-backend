@@ -33,6 +33,7 @@
         "nodemailer": "^6.9.14",
         "serverless-http": "^3.2.0",
         "socket.io": "^4.8.1",
+        "typescript": "^5.9.2",
         "xlsx": "^0.18.5"
     },
     "devDependencies": {
@@ -50,7 +51,6 @@
         "dotenv": "^16.4.5",
         "nodemon": "^3.1.4",
         "npm": "^10.8.2",
-        "ts-node": "^10.9.2",
-        "typescript": "^5.7.3"
+        "ts-node": "^10.9.2"
     }
 }
