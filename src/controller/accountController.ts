@@ -355,7 +355,7 @@ class accountController {
   async changeUserPreferences(req: AuthRequest, res: Response) {
     try {
       const userId = req._id;
-      const { currency, notification, securityMethod } = req.body;
+      const { currency, notification } = req.body;
 
       const user = await User.findById(userId);
 
@@ -391,14 +391,7 @@ class accountController {
           message: "Notification preferences updated successfully",
         });
       }
-      if (securityMethod) {
-        user.securityMethod = securityMethod;
-        await user.save();
-        return res.status(200).json({
-          success: true,
-          message: "Security method updated successfully",
-        });
-      }
+
     } catch (err: any) {
       console.log(err);
 
@@ -587,8 +580,8 @@ class accountController {
             <p>Hello ${user?.name},</p>
 
             <p>We're writing to confirm that your account has been deactivated as requested on ${moment(
-              deactivationDate
-            ).format("dddd D MMMM YYYY  HH:mm")}.</p>
+          deactivationDate
+        ).format("dddd D MMMM YYYY  HH:mm")}.</p>
 
             <p><span class="warning">Important:</span> Your account will be permanently deleted after 14 days (on
                 ${moment(deletionDate).format("DD MMM YYYY")}).</p>

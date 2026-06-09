@@ -407,7 +407,6 @@ class auth {
         picture: user.picture,
         isSetupDone: user?.isSetupDone,
         currency: user.currency,
-        securityMethod: user?.securityMethod,
         phoneNumber: user?.phoneNumber,
         activeContactRequestCount: user?.isAdmin
           ? activeRequestCount
@@ -506,7 +505,6 @@ class auth {
             isSetupDone: existingUser.isSetupDone,
             name: existingUser.name,
             currency: existingUser.currency,
-            securityMethod: existingUser?.securityMethod,
             phoneNumber: existingUser?.phoneNumber,
             isAdmin: existingUser.isAdmin,
             activeContactRequestCount: existingUser?.isAdmin
