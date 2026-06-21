@@ -114,7 +114,7 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
     },
     isRepeat: {
       type: Boolean,
-      required: function () {
+      required: function (this: any): boolean {
         return (
           this.transactionType === "Income" ||
           this.transactionType === "Expense"
@@ -123,7 +123,7 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
     },
     endAfter: {
       type: Date,
-      required: function () {
+      required: function (this: any): boolean {
         return this.isRepeat;
       },
     },
@@ -148,7 +148,7 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
     },
     transactionFor: {
       type: String,
-      required: function () {
+      required: function (this: any): boolean {
         return (
           this.transactionType === "Expense" || this.transactionType == "Income"
         );
@@ -176,7 +176,7 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
     },
     paymentMode: {
       type: String,
-      required: function () {
+      required: function (this: any): boolean {
         return (
           this.transactionType === "Expense" || this.transactionType == "Income"
         );
@@ -188,7 +188,7 @@ const transactionSchema = new mongoose.Schema<ITransactionSchema>(
     },
     notes: {
       type: String,
-      required: function () {
+      required: function (this: any): boolean {
         return (
           this.transactionType === "Expense" || this.transactionType == "Income"
         );

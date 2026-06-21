@@ -56,7 +56,7 @@ const monthlyBudgetSchema = new mongoose.Schema<IMonthlyBudget>({
   },
   alertValue: {
     type: Number,
-    required: function () {
+    required: function (this: any): boolean {
       return this.isReceiveAlert;
     },
   },
