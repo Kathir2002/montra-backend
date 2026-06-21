@@ -2,6 +2,8 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../model/userModel";
+import crypto from "crypto";
+
 import {
   encryptDetails,
   isValidEmail,
@@ -191,19 +193,20 @@ class auth {
       }
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(password, salt);
-      const verificationToken = Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
-
-      const user: any = new User({
+      const otp = crypto.randomInt(100000, 1000000).toString();
+      const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+      // Set expiry to 5 minutes from now
+      const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      const user = new User({
         email,
         password: hashedPassword,
         name,
-        verificationToken,
+        verificationToken: hashedOtp,
+        verificationTokenExpiresAt: otpExpiresAt,
+        failedVerificationAttempts: 0,
       });
-
       await user.save();
-      await sendVerificationEmail(email, verificationToken, name);
+      await sendVerificationEmail(email, otp, name);
 
       res.status(201).json({
         success: true,
@@ -218,40 +221,49 @@ class auth {
   async verifyOtp(req: Request, res: Response) {
     try {
       const { email, otp } = req.body;
-
-      // Check if all details are provided
       if (!email || !otp) {
-        return res.status(403).json({
-          success: false,
-          message: "All fields are required",
-        });
+        return res.status(403).json({ success: false, message: "All fields are required" });
       }
-      if (!isValidEmail(email)) {
-        return res
-          ?.status(400)
-          .json({ message: "Enter a valid email address" });
+      const user = await User.findOne({ email });
+      if (!user || !user.verificationToken) {
+        return res.status(400).json({ success: false, message: "Invalid verification code" });
       }
+      // 1. Check if token has expired
+      if (user.verificationTokenExpiresAt && user.verificationTokenExpiresAt < new Date()) {
+        return res.status(400).json({ success: false, message: "Verification code has expired" });
+      }
+      // 2. Hash incoming OTP to compare
+      const hashedInput = crypto.createHash("sha256").update(otp).digest("hex");
+      if (user.verificationToken !== hashedInput) {
+        // Increment failed attempts
+        user.failedVerificationAttempts = (user.failedVerificationAttempts || 0) + 1;
 
-      // Check if user already exists
-      const existingUser = await User.findOne({
-        email,
-        verificationToken: otp,
-      });
-      if (!existingUser) {
-        return res.status(400).json({
-          success: false,
-          message: "Invalid or expired verification code",
-        });
-      }
+        // Lock if failed too many times
+        if (user.failedVerificationAttempts >= 5) {
+          user.verificationToken = undefined;
+          user.verificationTokenExpiresAt = undefined;
+          user.failedVerificationAttempts = 0;
+          await user.save();
+          return res.status(400).json({
+            success: false,
+            message: "Too many failed attempts. Please request a new OTP."
+          });
+        }
 
-      existingUser.isVerified = true;
-      existingUser.verificationToken = undefined;
-      await existingUser.save();
+        await user.save();
+        return res.status(400).json({ success: false, message: "Invalid verification code" });
+      }
+      // Success: Reset all OTP related fields
+      user.isVerified = true;
+      user.verificationToken = undefined;
+      user.verificationTokenExpiresAt = undefined;
+      user.failedVerificationAttempts = 0;
+      await user.save();
 
       const userData = {
-        email: existingUser.email,
-        picture: existingUser.picture,
-        name: existingUser.name,
+        email: user.email,
+        picture: user.picture,
+        name: user.name,
       };
       return res.status(200).json({
         user: userData,
@@ -338,6 +350,7 @@ class auth {
           _id: existingUser._id,
           email: existingUser.email,
           role: existingUser?.isAdmin ? "Admin" : "User",
+          tokenVersion: existingUser.tokenVersion,
         },
         process.env.JWT_KEY as string
       );
@@ -465,6 +478,7 @@ class auth {
                 _id: newUser._id,
                 email: newUser.email,
                 role: newUser?.isAdmin ? "Admin" : "User",
+                tokenVersion: newUser.tokenVersion
               },
               process.env.JWT_KEY as string
             );
@@ -518,6 +532,7 @@ class auth {
               _id: existingUser._id,
               email: existingUser.email,
               role: existingUser?.isAdmin ? "Admin" : "User",
+              tokenVersion: existingUser.tokenVersion
             },
             process.env.JWT_KEY as string
           );
@@ -598,15 +613,16 @@ class auth {
           .status(404)
           .json({ message: "User not found", success: false });
       }
-      const jwtToken = jwt.sign(
-        {
-          _id: user._id,
-          email: user.email,
-          role: user?.isAdmin ? "Admin" : "User",
-        },
-        process.env.JWT_KEY as string,
-        { expiresIn: "1h" }
-      );
+      // 1. Generate a raw random token
+      const resetToken = crypto.randomBytes(32).toString("hex");
+      // 2. Hash it to store in the database (safeguards against DB leaks)
+      const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+      // 3. Set expiry to 5 mins from now
+      user.resetPasswordToken = hashedToken;
+      user.resetPasswordExpires = new Date(Date.now() + 5 * 60 * 1000); // 5 mins
+      await user.save();
+      // 4. Send the RAW resetToken in the link
+      const resetLink = `${process.env.DEEPLINK_URL}/reset-password/${resetToken}`;
 
       await sendMail({
         to: email,
@@ -699,7 +715,7 @@ class auth {
                   <p>It looks like you requested a password reset. Don't worry, we've got you covered!</p>
                   <p>Please click the button below to reset your password:</p>
                   <div class="btn-container">
-                      <a href="${process.env.DEEPLINK_URL}/reset-password/${jwtToken}" class="btn">Reset Password</a>
+                      <a href="${resetLink}" class="btn">Reset Password</a>
                   </div>
                   <p>If you didn't request a password reset, you can safely ignore this email. Your password will remain the same, and no changes will be made.</p>
                   <p>For any further assistance, feel free to contact our support team.</p>
@@ -723,22 +739,36 @@ class auth {
       return res.status(500).json({ success: false, message: err?.message });
     }
   }
-  async restPassword(req: AuthRequest, res: Response) {
+  async resetPassword(req: AuthRequest, res: Response) {
     try {
-      const { newPassword } = req.body;
-      const userId = req._id;
+      // Note: We read the token from the body/query instead of req.user (no verifyToken middleware used)
+      const { token, newPassword } = req.body;
 
-      const user = await User.findById(userId);
-      if (!user) {
-        return res
-          .status(404)
-          .json({ success: false, message: "User not found" });
+      if (!token || !newPassword) {
+        return res.status(400).json({ success: false, message: "Token and password are required" });
       }
+      // 1. Hash the incoming token to match it against database records
+      const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+      // 2. Find user with matching active token that hasn't expired yet
+      const user = await User.findOne({
+        resetPasswordToken: hashedToken,
+        resetPasswordExpires: { $gt: new Date() }, // Expiration must be greater than current time
+      });
+      if (!user) {
+        return res.status(400).json({ success: false, message: "Password reset token is invalid or has expired." });
+      }
+      // 3. Hash the new password and save it
       const salt = await bcrypt.genSalt();
       const hashedPassword = await bcrypt.hash(newPassword, salt);
-
       user.password = hashedPassword;
-      user.save();
+      // 4. IMPORTANT: Clear the reset token fields so the token cannot be reused
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+
+      // Increment tokenVersion to invalidate existing active user session tokens (forces global logout)
+      user.tokenVersion = (user.tokenVersion || 0) + 1;
+
+      await user.save();
 
       sendMail({
         to: user.email,
@@ -932,15 +962,21 @@ class auth {
   async resendOtp(req: Request, res: Response) {
     try {
       const { email } = req.body;
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = crypto.randomInt(100000, 1000000).toString();
+      const hashedOtp = crypto.createHash("sha256").update(otp).digest("hex");
+      // Set expiry to 5 minutes from now
+      const otpExpiresAt = new Date(Date.now() + 5 * 60 * 1000);
+
       const user = await User.findOne({ email });
       if (!user) {
         return res
           .status(404)
           .json({ success: false, message: "User not found" });
       }
-      user.verificationToken = otp;
-      user.save();
+      user.verificationToken = hashedOtp;
+      user.verificationTokenExpiresAt = otpExpiresAt;
+      user.failedVerificationAttempts = 0;
+      await user.save();
       sendVerificationEmail(email, otp, user?.name);
       res.status(200).json({
         success: true,

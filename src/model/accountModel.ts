@@ -1,6 +1,4 @@
 import mongoose from "mongoose";
-import AccountBalance from "./accountBalance";
-import User from "./userModel";
 
 export interface IAccountSchema {
   totalAccountBalance: number;

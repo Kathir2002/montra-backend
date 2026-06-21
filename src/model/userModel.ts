@@ -3,12 +3,17 @@ import mongoose from "mongoose";
 export interface IUserSchema {
   email: string;
   password: string;
+  tokenVersion: number;
   picture: string;
   phoneNumber?: number;
   isSetupDone: boolean;
   account: mongoose.Types.ObjectId;
   name: string;
   verificationToken: string | undefined;
+  verificationTokenExpiresAt: Date | undefined;
+  failedVerificationAttempts: number;
+  resetPasswordToken: string | undefined;
+  resetPasswordExpires: Date | undefined;
   isVerified: boolean;
   isActive: boolean;
   deactivatedAt: Date | null;
@@ -31,6 +36,9 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
   {
     deactivatedAt: { type: Date, default: null },
     isActive: { type: Boolean, default: true },
+    tokenVersion: { type: Number, default: 0 }, // Increments on global logout
+    resetPasswordToken: String,
+    resetPasswordExpires: Date,
     name: {
       type: String,
       required: true,
@@ -81,6 +89,11 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
       default: false,
     },
     verificationToken: String,
+    verificationTokenExpiresAt: Date,
+    failedVerificationAttempts: {
+      type: Number,
+      default: 0,
+    },
     notification: {
       isBudgetAlert: {
         type: Boolean,

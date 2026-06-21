@@ -19,11 +19,27 @@ import "./src/helper/budgetNotificationScheduler";
 import { contactSupportRouter } from "./src/routes/contactSupportRoute";
 import { createServer } from "http";
 import { initializeSocket } from "./src/helper/socket";
+import rateLimit from "express-rate-limit"
 
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Define the rate limiting rules
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes window
+  limit: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    status: 429,
+    error: 'Too many requests, please try again later.'
+  },
+  standardHeaders: 'draft-7', // Return standard RateLimit-* headers
+  legacyHeaders: false, // Disable the X-RateLimit-* headers
+});
+
+// Apply the rate limiting middleware globally to all routes
+app.use(globalLimiter);
 
 app.use(cors({ origin: "*" }));
 

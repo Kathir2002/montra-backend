@@ -2,6 +2,7 @@ import { NextFunction, Request, Response } from "express";
 import jwt, { JsonWebTokenError } from "jsonwebtoken";
 import { decryptDetails } from "../lib/functions";
 import mongoose from "mongoose";
+import User from "../model/userModel";
 
 export interface AuthRequest extends Request {
   _id?: mongoose.Types.ObjectId;
@@ -25,15 +26,22 @@ export const verifyToken = async (
     jwt.verify(
       token,
       process.env.JWT_KEY!,
-      (err: JsonWebTokenError | null, data: any) => {
+      async (err: JsonWebTokenError | null, data: any) => {
         if (err) {
           return res
             .status(401)
             .send({ message: "You are unauthorized.", success: false });
         }
+        const user = await User.findById(data._id);
+        if (!user || user?.tokenVersion !== data.tokenVersion) {
+          return res
+            .status(401)
+            .send({ message: "You are unauthorized.", success: false, });
+        }
         req._id = data._id;
         next();
       }
     );
+
   }
 };

@@ -453,6 +453,37 @@ class accountController {
       });
     }
   }
+  async logoutAllUser(req: AuthRequest, res: Response) {
+    try {
+      const userId = req?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res
+          .status(404)
+          .json({ success: false, message: "User not found" });
+      }
+
+      const result = await DeviceTokenService.logoutAllDevices(userId!);
+
+      if (result) {
+        user.tokenVersion += 1;
+        await user.save();
+        res.status(200).json({
+          success: true,
+          message: "Successfully logged out from all devices.",
+        });
+      } else {
+        res.status(404).json({
+          message: "Device token not found",
+        });
+      }
+    } catch (error: any) {
+      res.status(500).json({
+        message: "Failed to logout all devices",
+        error: error.message,
+      });
+    }
+  }
   async updateUserDetails(req: AuthRequest, res: Response) {
     try {
       const { name, phoneNumber } = req.body;
