@@ -30,6 +30,15 @@ export interface IUserSchema {
     isTipsAndArticles: boolean;
   };
   contactSupport: mongoose.Types.ObjectId[];
+  lastTelemetry: {
+    location: {
+      latitude: number;
+      longitude: number;
+    };
+    battery: number;
+    network: string;
+    timestamp: string;
+  }
 }
 
 const UserSchema = new mongoose.Schema<IUserSchema>(
@@ -159,6 +168,15 @@ const UserSchema = new mongoose.Schema<IUserSchema>(
         ref: "ContactSupport",
       },
     ],
+    lastTelemetry: {
+      location: {
+        latitude: Number,
+        longitude: Number,
+      },
+      battery: Number,
+      network: String,
+      timestamp: Date,
+    }
   },
   { timestamps: true }
 );

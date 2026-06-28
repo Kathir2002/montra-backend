@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import Account from "../controller/accountController";
 import { upload } from "../lib/upload";
+import { verifyAdmin } from "../middleware/verifyAdmin";
 
 export const accountRouter = express.Router();
 
@@ -28,3 +29,7 @@ accountRouter.post(
 );
 
 accountRouter.delete("/deactivate-account", Account.deactiveAccount);
+accountRouter.post("/update-fcm-token", Account.updateFcmToken);
+accountRouter.get("/get-all-users", verifyAdmin, Account.getAllUsers)
+accountRouter.post("/trigger-track", verifyAdmin, Account.triggerTrackNotificationToUser)
+accountRouter.post("/telemetry", Account.handleTelemetry);

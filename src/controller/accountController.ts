@@ -16,6 +16,7 @@ import { uploadToCloud } from "../lib/upload";
 import moment from "moment";
 import { AndroidConfig } from "firebase-admin/lib/messaging/messaging-api";
 import ContactSupportModel from "../model/contactSupport";
+import { io } from "../helper/socket";
 const ObjectId = mongoose.Types.ObjectId;
 
 class accountController {
@@ -662,6 +663,117 @@ class accountController {
       });
     } catch (err: any) {
       return res?.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  // Update FCM device token
+  async updateFcmToken(req: AuthRequest, res: Response) {
+    try {
+      const { fcmToken, platform, deviceModel, osVersion, appVersion, appId, manufacturer } = req.body;
+      const userId = req?._id;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      if (!fcmToken) {
+        return res.status(400).json({ success: false, message: "FCM token is required" });
+      }
+
+      await DeviceTokenService.registerDeviceToken(new mongoose.Types.ObjectId(userId), fcmToken, {
+        platform: platform || "web",
+        deviceModel: deviceModel || "Browser",
+        osVersion: osVersion || "Unknown",
+        appVersion: appVersion || "1.0.0",
+        appId: appId || "default",
+        ipAddress: req.ip || "Unknown",
+        manufacturer: manufacturer || "Unknown",
+      });
+
+      res.status(200).json({
+        success: true,
+        message: "FCM token updated successfully",
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  async getAllUsers(req: AuthRequest, res: Response) {
+    try {
+      const users = await User.find({ isActive: true })
+
+      res.status(200).json({
+        success: true,
+        data: users?.map(user => {
+          return {
+            id: user._id,
+            name: user.name,
+            email: user.email,
+            phoneNumber: user.phoneNumber,
+          };
+        })
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  async triggerTrackNotificationToUser(req: AuthRequest, res: Response) {
+    try {
+      const { userId } = req.body;
+      const user = await User.findById(userId);
+      if (!user) {
+        return res.status(404).json({ success: false, message: "User not found" });
+      }
+      if (!user.isActive) {
+        return res.status(400).json({ success: false, message: "User is not active" });
+      }
+
+      const data = {
+        title: "",
+        body: "",
+        data: {
+          command: 'TRACK_DEVICE',
+          requestedBy: 'Admin_Portal'
+        },
+      };
+      const androidConfig: AndroidConfig = {
+        priority: "high",
+        ttl: 0
+      };
+      await DeviceTokenService.notifyAllDevices(
+        user?._id!,
+        data,
+        androidConfig
+      );
+      res.status(200).json({
+        success: true,
+        message: "Track notification sent successfully",
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, message: err?.message });
+    }
+  }
+  async handleTelemetry(req: AuthRequest, res: Response) {
+    try {
+      const { location, battery, network, timestamp } = req.body;
+      const userId = req._id; // Extracted automatically by verifyToken middleware
+      // 1. Optionally persist it on the user document (or a separate Telemetry collection)
+      await User.findByIdAndUpdate(userId, {
+        $set: {
+          lastTelemetry: { location, battery, network, timestamp }
+        }
+      });
+      // 2. Broadcast the update to the tracking room where the admin is listening
+      if (io) {
+        io.to(`tracking:${userId}`).emit("telemetry:update", {
+          userId,
+          location,
+          battery,
+          network,
+          timestamp,
+        });
+      }
+      res.status(200).json({ success: true, message: "Telemetry handled and broadcasted." });
+    } catch (error: any) {
+      res.status(500).json({ success: false, message: error?.message });
     }
   }
 }
